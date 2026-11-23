@@ -196,8 +196,16 @@
     .stage-and-grid.has-stage .video-grid { flex: 0 0 220px; display: flex; flex-direction: column; overflow-y: auto; align-content: flex-start; }
     .stage-and-grid.has-stage .participant-tile { aspect-ratio: 16/10; min-height: 130px; flex-shrink: 0; }
 
-    .participant-tile { position: relative; background: #181b26; border: 2px solid rgba(255,255,255,0.06); border-radius: 14px; overflow: hidden; aspect-ratio: 16/10; max-height: calc(100dvh - 170px); width: 100%; display: flex; align-items: center; justify-content: center; }
-    .participant-tile.speaking { border-color: var(--success); box-shadow: 0 0 0 2px rgba(35, 165, 90, 0.35); }
+    .participant-tile {
+      position: relative; background: #181b26; border: 2.5px solid rgba(255,255,255,0.06);
+      border-radius: 14px; overflow: hidden; aspect-ratio: 16/10; max-height: calc(100dvh - 170px);
+      width: 100%; display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.04s linear, box-shadow 0.04s linear;
+    }
+    .participant-tile.speaking {
+      border-color: var(--success);
+      box-shadow: 0 0 0 3px rgba(35, 165, 90, 0.38);
+    }
     .participant-tile video, .participant-tile canvas.bot-canvas { width: 100%; height: 100%; object-fit: cover; display: block; }
     .avatar-circle { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: grid; place-items: center; font-weight: 800; font-size: 22px; color: #fff; text-transform: uppercase; }
     .tile-top-badges { position: absolute; top: 8px; left: 8px; display: flex; gap: 6px; }
@@ -564,7 +572,6 @@
         </div>
       </header>
 
-      <!-- Панель гостя (появляется только у тех, кто зашёл по пригласительной ссылке без рег.) -->
       <div id="guestBanner" class="alert-banner guest hidden">
         <span>Вы вошли по ссылке на звонок без регистрации как <strong id="guestBannerName">Гость</strong></span>
         <button id="guestRenameBtn" class="alert-action-btn" type="button">Изменить имя</button>
@@ -715,7 +722,7 @@
           <summary>Зарегистрированные аккаунты и статистика</summary>
           <div id="accountsRegistryList" class="accounts-list"></div>
           <button id="clearAccountsBtn" class="ghost-btn" style="margin-top:8px;">Очистить базу аккаунтов (для теста)</button>
-          <div class="field-group" style="margin-top:10px;"><label for="sandboxIdInput">LiveKit Sandbox ID</label><div class="input-with-actions"><input id="sandboxIdInput" type="text" /><button id="saveSandboxBtn" class="ghost-btn">Сохранить</button></div></div>
+          <div class="field-group" style="margin-top:10px;"><label for="sandboxIdInput">LiveKit Token Server ID</label><div class="input-with-actions"><input id="sandboxIdInput" type="text" /><button id="saveSandboxBtn" class="ghost-btn">Сохранить</button></div></div>
           <pre id="statsBox" class="stats-box">Ожидание...</pre>
         </details>
       </div>
@@ -761,8 +768,9 @@
       checks: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>'
     };
 
+    const storedSid = localStorage.getItem("zcall_sandbox_id");
     const state = {
-      sandboxId: (localStorage.getItem("zcall_sandbox_id") === "p_2qxku4v66yr" ? DEFAULT_SANDBOX_ID : localStorage.getItem("zcall_sandbox_id")) || DEFAULT_SANDBOX_ID,
+      sandboxId: (storedSid && storedSid !== "p_2qxku4v66yr") ? storedSid : DEFAULT_SANDBOX_ID,
       theme: localStorage.getItem("zcall_theme") || "indigo",
       user: null,
       roomName: "",
@@ -784,6 +792,80 @@
       typingTimer: null, lastTypingSent: 0, voiceRecorder: null, voiceChunks: [], voiceTimerInt: null, voiceStartedAt: 0,
       botEnabled: false, botSpeaking: false, botScreenTest: false, botEchoRecording: false
     };
+
+    /* МГНОВЕННЫЙ ДЕТЕКТОР ГОЛОСА (60 FPS Web Audio API, задержка ~16 мс) */
+    let voiceWatchCtx = null;
+    const voiceAnalyzers = new Map();
+    let voiceWatchRaf = null;
+
+    function ensureVoiceCtx() {
+      if (!voiceWatchCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) voiceWatchCtx = new AC();
+      }
+      if (voiceWatchCtx && voiceWatchCtx.state === "suspended") {
+        voiceWatchCtx.resume().catch(() => {});
+      }
+      return voiceWatchCtx;
+    }
+
+    function attachVoiceMeter(identity, mediaStreamTrack) {
+      detachVoiceMeter(identity);
+      if (!mediaStreamTrack || !identity) return;
+      try {
+        const ctx = ensureVoiceCtx();
+        if (!ctx) return;
+        const stream = new MediaStream([mediaStreamTrack]);
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.2;
+        source.connect(analyser); // Без подключения к destination — не дублирует звук!
+        voiceAnalyzers.set(identity, { analyser, data: new Uint8Array(analyser.fftSize), source, holdUntil: 0 });
+        startVoiceWatchLoop();
+      } catch (_) {}
+    }
+
+    function detachVoiceMeter(identity) {
+      const it = voiceAnalyzers.get(identity);
+      if (it) {
+        try { it.source.disconnect(); } catch (_) {}
+        voiceAnalyzers.delete(identity);
+      }
+      const tile = document.querySelector(`.participant-tile[data-identity="${CSS.escape(identity)}"]`);
+      if (tile) tile.classList.remove("speaking");
+    }
+
+    function clearAllVoiceMeters() {
+      for (const id of Array.from(voiceAnalyzers.keys())) detachVoiceMeter(id);
+      if (voiceWatchRaf) { cancelAnimationFrame(voiceWatchRaf); voiceWatchRaf = null; }
+    }
+
+    function startVoiceWatchLoop() {
+      if (voiceWatchRaf) return;
+      const tick = () => {
+        if (!state.inCall) { voiceWatchRaf = null; return; }
+        const now = performance.now();
+        for (const [id, item] of voiceAnalyzers.entries()) {
+          const mutedLocal = (id === state.localIdentity && !state.micEnabled);
+          let speaking = false;
+          if (!mutedLocal) {
+            item.analyser.getByteTimeDomainData(item.data);
+            let peak = 0;
+            for (let i = 0; i < item.data.length; i++) {
+              const amp = Math.abs(item.data[i] - 128);
+              if (amp > peak) peak = amp;
+            }
+            if (peak >= 3.2) item.holdUntil = now + 170;
+            speaking = now < item.holdUntil;
+          }
+          const tile = document.querySelector(`.participant-tile[data-identity="${CSS.escape(id)}"]`);
+          if (tile) tile.classList.toggle("speaking", speaking);
+        }
+        voiceWatchRaf = requestAnimationFrame(tick);
+      };
+      voiceWatchRaf = requestAnimationFrame(tick);
+    }
 
     function uid(len = 6) { return Math.random().toString(36).slice(2, 2 + len); }
     function toAsciiId(str, fallback = "user") {
@@ -841,7 +923,6 @@
       return id.includes("_") ? id.split("_")[0] : id;
     }
 
-    // Генерация прямой ссылки на звонок без регистрации
     function getGuestCallUrl(roomName) {
       const clean = (roomName || state.roomName || randomRoomName()).trim();
       const base = window.location.href.split("#")[0].split("?")[0];
@@ -981,9 +1062,7 @@
       updateUserBarUI(); syncRoomSettingsUI(); updateCallLayoutUI();
 
       await connectRoomChatOnly(state.roomName);
-      if (autoCall && state.room) {
-        await startCall({ withBot: false });
-      }
+      if (autoCall && state.room) await startCall({ withBot: false });
     }
 
     async function fetchSandboxTokenWithTimeout(roomName, identity) {
@@ -1002,6 +1081,7 @@
 
     async function disconnectLiveKit() {
       clearInterval(state.timerInterval); clearInterval(state.statsInterval);
+      clearAllVoiceMeters();
       stopBotEngine(); finishVoiceRecord(false);
       for (const it of state.audioEls.values()) it.el.remove();
       state.audioEls.clear(); state.profiles.clear();
@@ -1018,10 +1098,7 @@
 
       await disconnectLiveKit();
       state.roomName = roomName;
-      try {
-        const url = `?room=${encodeURIComponent(roomName)}${state.user?.isGuest ? "&guest=1" : ""}`;
-        window.history.replaceState(null, "", url);
-      } catch (_) {}
+      try { window.history.replaceState(null, "", `?room=${encodeURIComponent(roomName)}${state.user?.isGuest ? "&guest=1" : ""}`); } catch (_) {}
 
       $("sidebarRoomName").textContent = roomName;
       $("roomTitleBadge").textContent = `общий-чат · ${roomName}`;
@@ -1059,6 +1136,16 @@
       showToast(`Открыта комната ${clean}`);
     }
 
+    function syncLocalVoiceMeter() {
+      if (!state.room || !state.inCall || !state.micEnabled) {
+        detachVoiceMeter(state.localIdentity);
+        return;
+      }
+      const pub = state.room.localParticipant.getTrackPublication(LK.Track.Source.Microphone);
+      const track = pub?.track?.mediaStreamTrack;
+      if (track && !pub.isMuted) attachVoiceMeter(state.localIdentity, track);
+    }
+
     /* ЗВОНОК */
     function updateCallLayoutUI() {
       const inCall = state.inCall;
@@ -1077,6 +1164,7 @@
     }
 
     async function startCall({ withBot = false } = {}) {
+      ensureVoiceCtx();
       if (!state.room) { await connectRoomChatOnly(state.roomName); if (!state.room) { showToast("Нет подключения к серверу"); return; } }
       state.inCall = true; state.micEnabled = true;
       if (withBot) state.botEnabled = true;
@@ -1084,6 +1172,7 @@
       if (withBot) startBotEngine(true);
 
       const micP = Promise.race([state.room.localParticipant.setMicrophoneEnabled(true, getAudioCaptureOpts()), new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 6000))])
+        .then(() => syncLocalVoiceMeter())
         .catch(() => { state.micEnabled = false; showToast("Нажмите на кнопку Микрофон снизу, чтобы разрешить звук"); });
       let camP = Promise.resolve();
       if (state.camEnabled) {
@@ -1091,11 +1180,13 @@
           .catch(() => { state.camEnabled = false; showToast("Камера не отвечает или занята"); });
       }
       await Promise.allSettled([micP, camP]);
+      syncLocalVoiceMeter();
       updateDockButtons(); renderAllTiles(); loadDevices();
     }
 
     async function endCall() {
       clearInterval(state.timerInterval); clearInterval(state.statsInterval);
+      clearAllVoiceMeters();
       stopBotEngine(); state.inCall = false; state.screenSharing = false; state.handRaised = false; state.pinnedIdentity = null;
       if (state.room) {
         await Promise.allSettled([state.room.localParticipant.setMicrophoneEnabled(false), state.room.localParticipant.setCameraEnabled(false), state.room.localParticipant.setScreenShareEnabled(false)]);
@@ -1103,7 +1194,7 @@
       updateCallLayoutUI(); renderAllTiles();
     }
 
-    /* КАЧЕСТВО */
+    /* КАЧЕСТВО И МИНИМАЛЬНАЯ ЗАДЕРЖКА */
     function getVideoCaptureOpts() {
       const dev = state.videoDeviceId ? { deviceId: state.videoDeviceId } : {};
       if (state.quality === "4k") return { ...dev, resolution: { width: 3840, height: 2160, frameRate: 30 } };
@@ -1112,14 +1203,14 @@
     }
     function getAudioCaptureOpts() {
       const dev = state.audioDeviceId ? { deviceId: state.audioDeviceId } : {};
-      if (state.cleanMic || state.audioPreset === "stereo") return { ...dev, autoGainControl: false, echoCancellation: true, noiseSuppression: false };
-      return { ...dev, autoGainControl: true, echoCancellation: true, noiseSuppression: true };
+      if (state.cleanMic || state.audioPreset === "stereo") return { ...dev, latency: { ideal: 0.01 }, autoGainControl: false, echoCancellation: true, noiseSuppression: false };
+      return { ...dev, latency: { ideal: 0.01 }, autoGainControl: true, echoCancellation: true, noiseSuppression: true };
     }
     function getPublishDefaults() {
       const camEnc = state.quality === "4k" ? { maxBitrate: 10_000_000, maxFramerate: 60 } : state.quality === "720" ? { maxBitrate: 1_700_000, maxFramerate: 30 } : { maxBitrate: 4_500_000, maxFramerate: 60 };
       const scrEnc = state.quality === "4k" ? { maxBitrate: 14_000_000, maxFramerate: 60 } : state.quality === "720" ? { maxBitrate: 2_500_000, maxFramerate: 30 } : { maxBitrate: 8_000_000, maxFramerate: 60 };
       const audioPreset = state.audioPreset === "stereo" ? LK.AudioPresets.musicHighQualityStereo : state.audioPreset === "speech" ? LK.AudioPresets.speech : LK.AudioPresets.musicHighQuality;
-      return { audioPreset, forceStereo: state.audioPreset === "stereo", dtx: state.audioPreset === "speech", red: true, videoEncoding: camEnc, screenShareEncoding: scrEnc, simulcast: true, videoCodec: "vp9", backupCodec: { codec: "vp8" } };
+      return { audioPreset, forceStereo: state.audioPreset === "stereo", dtx: false, red: true, videoEncoding: camEnc, screenShareEncoding: scrEnc, simulcast: true, videoCodec: "vp9", backupCodec: { codec: "vp8" } };
     }
     function getScreenCaptureOpts() {
       const opts = { audio: true, contentHint: state.screenMode === "detail" ? "detail" : "motion" };
@@ -1154,12 +1245,19 @@
         .on(RE.ParticipantConnected, (p) => { showToast(`${displayNameOf(p)} присоединился`); setTimeout(broadcastProfile, 350); renderAllTiles(); })
         .on(RE.ParticipantDisconnected, (p) => { cleanupParticipantAudio(p.identity); if (state.pinnedIdentity === p.identity) state.pinnedIdentity = null; renderAllTiles(); })
         .on(RE.TrackSubscribed, (t, pub, p) => { if (t.kind === LK.Track.Kind.Audio) attachRemoteAudio(t, pub, p); renderAllTiles(); })
-        .on(RE.TrackUnsubscribed, (t, pub, p) => { t.detach().forEach((el) => el.remove()); if (t.kind === LK.Track.Kind.Audio) removeAudioEl(`${p.identity}_${pub.source}`); renderAllTiles(); })
-        .on(RE.LocalTrackPublished, () => renderAllTiles()).on(RE.LocalTrackUnpublished, () => renderAllTiles())
-        .on(RE.TrackMuted, () => renderAllTiles()).on(RE.TrackUnmuted, () => renderAllTiles())
+        .on(RE.TrackUnsubscribed, (t, pub, p) => { t.detach().forEach((el) => el.remove()); if (t.kind === LK.Track.Kind.Audio) removeAudioEl(`${p.identity}_${pub.source}`, p.identity); renderAllTiles(); })
+        .on(RE.LocalTrackPublished, (pub) => { if (pub.source === LK.Track.Source.Microphone) syncLocalVoiceMeter(); renderAllTiles(); })
+        .on(RE.LocalTrackUnpublished, (pub) => { if (pub.source === LK.Track.Source.Microphone) detachVoiceMeter(state.localIdentity); renderAllTiles(); })
+        .on(RE.TrackMuted, (pub, p) => { if (p.identity === state.localIdentity && pub.source === LK.Track.Source.Microphone) detachVoiceMeter(state.localIdentity); renderAllTiles(); })
+        .on(RE.TrackUnmuted, (pub, p) => { if (p.identity === state.localIdentity && pub.source === LK.Track.Source.Microphone) syncLocalVoiceMeter(); renderAllTiles(); })
         .on(RE.ActiveSpeakersChanged, (speakers) => {
+          // Используем как запасной вариант только для тех, у кого нет WebAudio-метра
           const ids = new Set(speakers.map((s) => s.identity));
-          document.querySelectorAll(".participant-tile").forEach((tile) => tile.classList.toggle("speaking", tile.dataset.identity === "zcall-bot" ? state.botSpeaking : ids.has(tile.dataset.identity)));
+          document.querySelectorAll(".participant-tile").forEach((tile) => {
+            const id = tile.dataset.identity;
+            if (id === "zcall-bot" || voiceAnalyzers.has(id)) return;
+            tile.classList.toggle("speaking", ids.has(id));
+          });
         })
         .on(RE.AudioPlaybackStatusChanged, () => $("audioUnlockBanner").classList.toggle("hidden", room.canPlaybackAudio))
         .on(RE.Reconnecting, () => $("reconnectBanner").classList.remove("hidden"))
@@ -1182,19 +1280,38 @@
 
     function attachRemoteAudio(track, pub, participant) {
       const key = `${participant.identity}_${pub.source}`; removeAudioEl(key);
+      // Минимальный джиттер-буфер для голоса (убирает искусственную задержку)
+      try {
+        const rtp = pub?.audioTrack?.receiver || track?.receiver;
+        if (rtp && "playoutDelayHint" in rtp) rtp.playoutDelayHint = 0.02;
+        if (rtp && "jitterBufferTarget" in rtp) rtp.jitterBufferTarget = 20;
+      } catch (_) {}
+
       const el = track.attach(); el.autoplay = true; el.playsInline = true; el.style.display = "none";
       el.volume = Math.max(0, Math.min(1, (state.volumes.get(participant.identity) ?? 100) / 100));
       document.body.appendChild(el); state.audioEls.set(key, { el, identity: participant.identity });
       el.play().catch(() => { if (state.room && !state.room.canPlaybackAudio) $("audioUnlockBanner").classList.remove("hidden"); });
+
+      // Мгновенная обводка от реального входящего звука
+      if (pub.source === LK.Track.Source.Microphone && track.mediaStreamTrack) {
+        attachVoiceMeter(participant.identity, track.mediaStreamTrack);
+      }
     }
-    function removeAudioEl(k) { const it = state.audioEls.get(k); if (it) { it.el.remove(); state.audioEls.delete(k); } }
-    function cleanupParticipantAudio(id) { for (const [k, it] of state.audioEls.entries()) if (it.identity === id) { it.el.remove(); state.audioEls.delete(k); } }
+    function removeAudioEl(k, pid) {
+      const it = state.audioEls.get(k);
+      if (it) { it.el.remove(); state.audioEls.delete(k); }
+      if (pid && k.endsWith(`_${LK.Track.Source.Microphone}`)) detachVoiceMeter(pid);
+    }
+    function cleanupParticipantAudio(id) {
+      detachVoiceMeter(id);
+      for (const [k, it] of state.audioEls.entries()) if (it.identity === id) { it.el.remove(); state.audioEls.delete(k); }
+    }
     function setParticipantVolume(id, v) { state.volumes.set(id, v); for (const it of state.audioEls.values()) if (it.identity === id) it.el.volume = Math.max(0, Math.min(1, v / 100)); }
 
     /* ТЕСТ-БОТ */
     function startBotEngine(report = false) {
       state.botEnabled = true; $("toggleBotBtn").classList.add("active"); renderAllTiles();
-      if (report) setTimeout(() => appendChatMessage({ id: uid(8), senderIdentity: "zcall-bot", senderName: "Zcall Бот", text: `Проверка звонка запущена!\n• Имя: ${state.user?.nick}\n• Комната: ${state.roomName}\n• Связь: ${state.room ? "LiveKit онлайн" : "Ожидание"}\n\nНажми «Эхо-тест 4с» на моей карточке или напиши сюда («фото», «голос», «экран»).`, time: Date.now() }), 300);
+      if (report) setTimeout(() => appendChatMessage({ id: uid(8), senderIdentity: "zcall-bot", senderName: "Zcall Бот", text: `Проверка звонка запущена!\n• Имя: ${state.user?.nick}\n• Комната: ${state.roomName}\n• Связь: ${state.room ? "LiveKit онлайн" : "Ожидание"}\n\nСкажи что-нибудь — обводка загорится мгновенно! Нажми «Эхо-тест 4с» на моей карточке для проверки записи.`, time: Date.now() }), 300);
     }
     function stopBotEngine() { state.botEnabled = false; state.botScreenTest = false; state.botSpeaking = false; $("toggleBotBtn").classList.remove("active"); renderAllTiles(); }
 
@@ -1327,7 +1444,6 @@
         const isLocal = p.identity === state.localIdentity, prof = state.profiles.get(p.identity) || {};
         const name = isLocal ? (state.user?.nick || "Вы") : displayNameOf(p), hand = isLocal ? state.handRaised : !!prof.handRaised, filter = isLocal ? state.filter : prof.filter || "none";
         const tile = document.createElement("div"); tile.className = "participant-tile"; tile.dataset.identity = p.identity;
-        if (p.isSpeaking) tile.classList.add("speaking");
         const camPub = p.getTrackPublication(LK.Track.Source.Camera), micPub = p.getTrackPublication(LK.Track.Source.Microphone);
         const hasVideo = camPub?.track && !camPub.isMuted, isMicMuted = isLocal ? !state.micEnabled : (!micPub || micPub.isMuted);
         if (hasVideo) {
@@ -1396,10 +1512,15 @@
     }
 
     async function toggleMic() {
+      ensureVoiceCtx();
       if (!state.inCall) { state.micEnabled = !state.micEnabled; updateDockButtons(); return; }
       const next = !state.micEnabled;
-      try { await state.room.localParticipant.setMicrophoneEnabled(next, getAudioCaptureOpts()); state.micEnabled = next; updateDockButtons(); renderAllTiles(); }
-      catch { showToast("Нет доступа к микрофону"); }
+      try {
+        await state.room.localParticipant.setMicrophoneEnabled(next, getAudioCaptureOpts());
+        state.micEnabled = next;
+        if (next) syncLocalVoiceMeter(); else detachVoiceMeter(state.localIdentity);
+        updateDockButtons(); renderAllTiles();
+      } catch { showToast("Нет доступа к микрофону"); }
     }
     async function toggleCam() {
       if (!state.inCall) { state.camEnabled = !state.camEnabled; updateDockButtons(); return; }
@@ -1560,7 +1681,7 @@
     async function applyQualityMidCall() {
       if (!state.inCall || !state.room) return;
       if (state.camEnabled) { await state.room.localParticipant.setCameraEnabled(false); await state.room.localParticipant.setCameraEnabled(true, getVideoCaptureOpts()); }
-      if (state.micEnabled) { await state.room.localParticipant.setMicrophoneEnabled(false); await state.room.localParticipant.setMicrophoneEnabled(true, getAudioCaptureOpts()); }
+      if (state.micEnabled) { await state.room.localParticipant.setMicrophoneEnabled(false); await state.room.localParticipant.setMicrophoneEnabled(true, getAudioCaptureOpts()); syncLocalVoiceMeter(); }
       renderAllTiles();
     }
 
@@ -1607,7 +1728,7 @@
       $("toggleBotBtn").onclick = () => { if (!state.inCall) startCall({ withBot: true }); else if (state.botEnabled) stopBotEngine(); else startBotEngine(true); };
       $("botRailBtn").onclick = $("toggleBotBtn").onclick;
 
-      $("unlockAudioBtn").onclick = async () => { if (state.room) { await state.room.startAudio(); $("audioUnlockBanner").classList.add("hidden"); } };
+      $("unlockAudioBtn").onclick = async () => { ensureVoiceCtx(); if (state.room) { await state.room.startAudio(); $("audioUnlockBanner").classList.add("hidden"); } };
       $("micBtn").onclick = toggleMic; $("userPanelMicBtn").onclick = toggleMic;
       $("camBtn").onclick = toggleCam; $("userPanelCamBtn").onclick = toggleCam;
       $("screenBtn").onclick = toggleScreenShare; $("handBtn").onclick = toggleHand; $("leaveBtn").onclick = endCall;
@@ -1630,7 +1751,7 @@
 
       $("lobbyQualitySelect").onchange = (e) => { state.quality = e.target.value; localStorage.setItem("zcall_quality", state.quality); applyQualityMidCall(); };
       $("lobbyAudioPresetSelect").onchange = (e) => { state.audioPreset = e.target.value; localStorage.setItem("zcall_audio_preset", state.audioPreset); applyQualityMidCall(); };
-      $("roomAudioSelect").onchange = async (e) => { state.audioDeviceId = e.target.value; await state.room?.switchActiveDevice("audioinput", state.audioDeviceId); };
+      $("roomAudioSelect").onchange = async (e) => { state.audioDeviceId = e.target.value; await state.room?.switchActiveDevice("audioinput", state.audioDeviceId); syncLocalVoiceMeter(); };
       $("roomVideoSelect").onchange = async (e) => { state.videoDeviceId = e.target.value; await state.room?.switchActiveDevice("videoinput", state.videoDeviceId); };
       $("roomQualitySelect").onchange = (e) => { state.quality = e.target.value; localStorage.setItem("zcall_quality", state.quality); applyQualityMidCall(); };
       $("roomAudioPresetSelect").onchange = (e) => { state.audioPreset = e.target.value; localStorage.setItem("zcall_audio_preset", state.audioPreset); applyQualityMidCall(); };
@@ -1640,7 +1761,7 @@
       $("cleanMicToggle").onchange = (e) => { state.cleanMic = e.target.checked; localStorage.setItem("zcall_clean_mic", String(state.cleanMic)); applyQualityMidCall(); };
       $("mirrorSelfToggle").onchange = (e) => { state.mirrorSelf = e.target.checked; localStorage.setItem("zcall_mirror", String(state.mirrorSelf)); renderAllTiles(); };
       $("uiSoundsToggle").onchange = (e) => { state.uiSounds = e.target.checked; localStorage.setItem("zcall_sounds", String(state.uiSounds)); };
-      $("saveSandboxBtn").onclick = () => { const v = $("sandboxIdInput").value.trim() || DEFAULT_SANDBOX_ID; state.sandboxId = v; localStorage.setItem("zcall_sandbox_id", v); showToast("Sandbox ID сохранён"); };
+      $("saveSandboxBtn").onclick = () => { const v = $("sandboxIdInput").value.trim() || DEFAULT_SANDBOX_ID; state.sandboxId = v; localStorage.setItem("zcall_sandbox_id", v); showToast("Token Server ID сохранён"); };
 
       $("sendChatBtn").onclick = sendChatText;
       $("chatInput").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatText(); } };
@@ -1664,7 +1785,6 @@
       $("closeLightboxBtn").onclick = () => $("lightboxModal").classList.add("hidden");
       $("lightboxModal").onclick = (e) => { if (e.target === $("lightboxModal")) $("lightboxModal").classList.add("hidden"); };
 
-      // Проверка сохранённого аккаунта или гостевой ссылки (?guest=1)
       let saved = null;
       try { saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch (_) {}
 
