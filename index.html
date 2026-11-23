@@ -7,12 +7,343 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.23.0/dist/livekit-client.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-rail: #12141a;
+      --bg-sidebar: #1a1d26;
+      --bg-main: #20232e;
+      --bg-userbar: #151720;
+      --bg-card: #161923;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f2f4f8;
+      --text-muted: #949ba8;
+      --accent: #5865f2;
+      --accent-glow: rgba(88, 101, 242, 0.35);
+      --accent-2: #7c3aed;
+      --danger: #da373c;
+      --success: #23a55a;
+      --warn: #f0b232;
+      --chat-self: #4752c4;
+      --chat-other: #282c3a;
+    }
+    body[data-theme="blue"] { --accent: #2d8cff; --accent-glow: rgba(45,140,255,0.35); --accent-2: #0284c7; --chat-self: #1d6fe3; }
+    body[data-theme="teal"] { --accent: #00c2cb; --accent-glow: rgba(0,194,203,0.35); --accent-2: #0ea5e9; --chat-self: #0e7490; }
+    body[data-theme="emerald"] { --accent: #23a55a; --accent-glow: rgba(35,165,90,0.35); --accent-2: #059669; --chat-self: #15803d; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      height: 100%; background: var(--bg-main); color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+    }
+    .hidden { display: none !important; }
+    .show-mobile { display: none !important; }
+
+    .field-group { display: flex; flex-direction: column; gap: 5px; }
+    .field-group label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+
+    input[type="text"], input[type="password"], select, textarea {
+      width: 100%; background: #101219; border: 1px solid var(--border);
+      color: var(--text); border-radius: 9px; padding: 9px 11px;
+      font-size: 13.5px; font-family: inherit; outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    .two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .ghost-btn {
+      background: rgba(255,255,255,0.07); color: var(--text); border: 1px solid var(--border);
+      border-radius: 9px; padding: 7px 12px; font-size: 12px; font-weight: 600;
+      cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    }
+
+    /* ЭКРАН РЕГИСТРАЦИИ / ВХОДА */
+    .auth-view { height: 100dvh; display: grid; place-items: center; padding: 20px; position: relative; background: #0f1118; }
+    .auth-glow {
+      position: fixed; inset: 0; pointer-events: none;
+      background: radial-gradient(circle at 25% 20%, var(--accent-glow), transparent 45%),
+                  radial-gradient(circle at 80% 80%, rgba(124,58,237,0.2), transparent 45%);
+    }
+    .auth-card {
+      position: relative; z-index: 1; width: 100%; max-width: 440px;
+      background: var(--bg-sidebar); border: 1px solid var(--border);
+      border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 16px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+    }
+    .auth-brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo {
+      width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: grid; place-items: center; color: #fff;
+    }
+    .auth-brand h1 { font-size: 22px; font-weight: 800; line-height: 1.1; }
+    .auth-brand p { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+
+    .auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #11131b; padding: 4px; border-radius: 11px; }
+    .auth-tab { padding: 9px; border-radius: 8px; border: none; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; }
+    .auth-tab.active { background: var(--accent); color: #fff; }
+    .auth-form { display: flex; flex-direction: column; gap: 12px; }
+    .auth-error { font-size: 12.5px; color: #fca5a5; min-height: 16px; font-weight: 600; }
+    .auth-submit-btn { width: 100%; padding: 13px; border-radius: 10px; border: none; background: var(--accent); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .auth-submit-btn:hover { filter: brightness(1.08); }
+
+    /* DISCORD ОБОЛОЧКА */
+    .discord-shell { display: flex; height: 100dvh; width: 100vw; overflow: hidden; }
+    .server-rail {
+      width: 66px; flex-shrink: 0; background: var(--bg-rail); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 8px; z-index: 30;
+    }
+    .rail-item {
+      width: 44px; height: 44px; border-radius: 50%; border: none; background: #232734; color: var(--text);
+      font-weight: 700; font-size: 14px; display: grid; place-items: center; cursor: pointer; transition: border-radius 0.16s, background 0.16s;
+    }
+    .rail-item:hover, .rail-item.active { border-radius: 14px; background: var(--accent); color: #fff; }
+    .rail-item.brand-rail { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; border-radius: 14px; }
+    .rail-item.add-rail { color: var(--success); }
+    .rail-item.add-rail:hover { background: var(--success); color: #fff; }
+    .rail-divider { width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; }
+    .rail-rooms { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; align-items: center; }
+    .rail-bottom { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .theme-rail-dots { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 6px; background: rgba(255,255,255,0.04); border-radius: 10px; }
+    .theme-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--dot); border: 2px solid transparent; cursor: pointer; }
+    .theme-dot.active { border-color: #fff; transform: scale(1.15); }
+
+    .channel-sidebar { width: 252px; flex-shrink: 0; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 28; }
+    .channel-header { height: 50px; padding: 0 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .channel-server-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .channel-header-btns { display: flex; gap: 4px; }
+    .channel-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 8px; display: flex; flex-direction: column; gap: 4px; }
+    .channel-cat { font-size: 11px; font-weight: 700; color: var(--text-muted); padding: 10px 8px 4px; letter-spacing: 0.04em; }
+
+    .channel-row {
+      width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px;
+      border: none; background: transparent; color: var(--text-muted); font-size: 14px; font-weight: 500; cursor: pointer; text-align: left;
+    }
+    .channel-row:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+    .channel-row.active { background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; }
+    .channel-hash { font-size: 17px; font-weight: 700; color: var(--text-muted); }
+
+    .voice-count-pill { margin-left: auto; background: rgba(255,255,255,0.08); padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .voice-members-tree { display: flex; flex-direction: column; gap: 3px; padding: 2px 8px 6px 24px; }
+    .tree-member { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-muted); padding: 3px 6px; }
+    .tree-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+
+    .sidebar-quick-form { padding: 6px 8px; display: flex; flex-direction: column; gap: 10px; }
+    .input-with-actions { display: flex; gap: 6px; }
+    .icon-square-btn { width: 36px; flex-shrink: 0; background: rgba(255,255,255,0.07); border: 1px solid var(--border); border-radius: 9px; color: var(--text); display: grid; place-items: center; cursor: pointer; }
+
+    .discord-user-bar { height: 58px; padding: 0 8px; background: var(--bg-userbar); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+    .user-bar-info { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .user-bar-avatar-wrap { position: relative; flex-shrink: 0; }
+    .user-bar-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; }
+    .user-status-dot { position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-radius: 50%; background: var(--success); border: 2px solid var(--bg-userbar); }
+    .user-bar-meta { display: flex; flex-direction: column; min-width: 0; }
+    .user-bar-name { font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-bar-status { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-bar-controls { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+
+    .mini-icon-btn { width: 28px; height: 28px; border-radius: 7px; border: none; background: transparent; color: var(--text-muted); display: grid; place-items: center; cursor: pointer; }
+    .mini-icon-btn:hover { background: rgba(255,255,255,0.09); color: #fff; }
+    .mini-icon-btn.off { color: #f87171; background: rgba(218, 55, 60, 0.16); }
+
+    /* ЦЕНТРАЛЬНАЯ КОЛОНКА */
+    .main-column { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg-main); }
+    .room-topbar { height: 50px; padding: 0 14px; border-bottom: 1px solid var(--border); background: var(--bg-main); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; }
+    .topbar-left, .topbar-center, .topbar-right { display: flex; align-items: center; gap: 8px; }
+    .topbar-channel-title { display: flex; align-items: center; gap: 5px; font-weight: 700; font-size: 15px; }
+
+    .room-pill-btn { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .timer-pill, .count-pill, .net-pill { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 4px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+    .status-dot.warn { background: var(--warn); }
+    .status-dot.bad { background: var(--danger); }
+
+    .start-call-btn { background: var(--success); border: none; color: #fff; border-radius: 9px; padding: 7px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .start-call-btn:hover { filter: brightness(1.08); }
+    .end-call-btn { background: var(--danger); border: none; color: #fff; border-radius: 9px; padding: 7px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+    .topbar-icon-btn { background: rgba(255,255,255,0.07); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+    .topbar-icon-btn.active { background: var(--accent); border-color: transparent; color: #fff; }
+
+    .alert-banner { background: var(--accent); color: #fff; padding: 7px 14px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 13px; font-weight: 600; }
+    .alert-banner.warn { background: #b45309; }
+    .alert-action-btn { background: #fff; color: #111; border: none; border-radius: 999px; padding: 4px 12px; font-weight: 700; cursor: pointer; }
+
+    .main-workspace { flex: 1; min-height: 0; display: flex; position: relative; }
+    .main-workspace.chat-fullscreen .chat-drawer { width: 100%; border-left: none; }
+
+    .stage-and-grid { flex: 1; min-width: 0; min-height: 0; padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; background: #0f1118; }
+    .stage-and-grid.has-stage { flex-direction: row; overflow: hidden; }
+    .stage-wrapper { flex: 1; min-width: 0; min-height: 0; background: #06080d; border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; }
+    .stage-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #141722; border-bottom: 1px solid var(--border); }
+    .stage-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+    .stage-presenter { color: var(--text-muted); font-weight: 500; }
+    .stage-actions { display: flex; gap: 6px; }
+    .stage-btn { background: rgba(255,255,255,0.08); color: var(--text); border: 1px solid var(--border); border-radius: 7px; padding: 4px 9px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .stage-video-area { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: #000; }
+    .stage-video-area video, .stage-video-area canvas { width: 100%; height: 100%; object-fit: contain; }
+
+    .video-grid { flex: 1; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-content: center; }
+    .stage-and-grid.has-stage .video-grid { flex: 0 0 220px; display: flex; flex-direction: column; overflow-y: auto; align-content: flex-start; }
+    .stage-and-grid.has-stage .participant-tile { aspect-ratio: 16/10; min-height: 130px; flex-shrink: 0; }
+
+    .participant-tile { position: relative; background: #181b26; border: 2px solid rgba(255,255,255,0.06); border-radius: 14px; overflow: hidden; aspect-ratio: 16/10; max-height: calc(100dvh - 170px); width: 100%; display: flex; align-items: center; justify-content: center; }
+    .participant-tile.speaking { border-color: var(--success); box-shadow: 0 0 0 2px rgba(35, 165, 90, 0.35); }
+    .participant-tile video, .participant-tile canvas.bot-canvas { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .avatar-circle { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: grid; place-items: center; font-weight: 800; font-size: 22px; color: #fff; text-transform: uppercase; }
+    .tile-top-badges { position: absolute; top: 8px; left: 8px; display: flex; gap: 6px; }
+    .tile-pill { background: rgba(0,0,0,0.75); padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .hand-badge { background: var(--warn); color: #111; }
+
+    .bot-tile-controls { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 4; }
+    .bot-action-chip { background: rgba(15,18,30,0.9); border: 1px solid rgba(88,101,242,0.55); color: #e0e7ff; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
+    .bot-action-chip:hover { background: var(--accent); color: #fff; }
+
+    .tile-bottom-bar { position: absolute; bottom: 8px; left: 8px; right: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(8,10,16,0.78); backdrop-filter: blur(8px); padding: 5px 9px; border-radius: 10px; }
+    .tile-name-wrap { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; font-weight: 600; }
+    .tile-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tile-actions { display: flex; align-items: center; gap: 6px; }
+    .tile-vol-slider { width: 60px; accent-color: var(--accent); }
+    .tile-mini-btn { background: rgba(255,255,255,0.12); border: none; color: #fff; width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; cursor: pointer; }
+
+    video.filter-cinematic { filter: contrast(1.12) saturate(1.22) brightness(1.03); }
+    video.filter-warm { filter: sepia(0.18) saturate(1.25) contrast(1.08) brightness(1.04); }
+    video.filter-neon { filter: contrast(1.24) saturate(1.42) hue-rotate(-6deg); }
+    video.filter-bw { filter: grayscale(1) contrast(1.22); }
+    .mirrored { transform: scaleX(-1); }
+
+    /* ЧАТ */
+    .chat-drawer { width: 350px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--bg-main); display: flex; flex-direction: column; position: relative; z-index: 15; }
+    .sidebar-top { padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--bg-sidebar); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .sidebar-tabs { display: flex; gap: 4px; background: rgba(0,0,0,0.25); padding: 3px; border-radius: 10px; flex: 1; max-width: 320px; }
+    .sidebar-tab { flex: 1; padding: 6px 8px; border-radius: 8px; border: none; background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; }
+    .sidebar-tab.active { background: var(--accent); color: #fff; }
+    .icon-close-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: rgba(255,255,255,0.08); color: var(--text); display: grid; place-items: center; cursor: pointer; }
+
+    .tab-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+    .chat-status-strip { padding: 5px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .chat-substatus { font-size: 11px; color: var(--success); font-weight: 600; }
+    .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .chat-system-msg { align-self: center; background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 11.5px; padding: 7px 12px; border-radius: 8px; text-align: center; }
+
+    .msg-row { display: flex; flex-direction: column; max-width: 82%; align-self: flex-start; }
+    .msg-row.self { align-self: flex-end; }
+    .msg-bubble { background: var(--chat-other); border-radius: 12px 12px 12px 4px; padding: 8px 11px; word-wrap: break-word; overflow-wrap: anywhere; }
+    .msg-row.self .msg-bubble { background: var(--chat-self); border-radius: 12px 12px 4px 12px; }
+    .msg-author { font-size: 11px; font-weight: 700; color: #93c5fd; margin-bottom: 3px; }
+    .msg-row.self .msg-author { display: none; }
+    .msg-quote { background: rgba(0,0,0,0.28); border-left: 3px solid var(--accent-2); border-radius: 6px; padding: 4px 8px; margin-bottom: 5px; font-size: 12px; }
+    .msg-quote strong { display: block; font-size: 11px; color: #bfdbfe; }
+    .msg-quote span { color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .msg-text { font-size: 14px; line-height: 1.42; white-space: pre-wrap; }
+    .msg-text a { color: #93c5fd; text-decoration: underline; }
+    .msg-image { max-width: 100%; max-height: 240px; border-radius: 9px; margin-top: 4px; cursor: pointer; display: block; }
+
+    .msg-voice-player { display: flex; align-items: center; gap: 10px; min-width: 210px; padding: 3px 0; }
+    .voice-play-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: #fff; display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
+    .voice-track { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .voice-progress-bg { height: 5px; background: rgba(255,255,255,0.2); border-radius: 999px; overflow: hidden; }
+    .voice-progress-fill { height: 100%; width: 0%; background: #fff; }
+    .voice-duration { font-size: 11px; color: rgba(255,255,255,0.8); }
+
+    .msg-file-card { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(0,0,0,0.25); padding: 7px 9px; border-radius: 9px; margin-top: 4px; }
+    .msg-file-name { font-size: 12px; font-weight: 600; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .msg-file-size { font-size: 11px; color: var(--text-muted); }
+
+    .msg-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 4px; }
+    .msg-time { font-size: 10px; color: rgba(255,255,255,0.7); margin-left: auto; display: inline-flex; align-items: center; gap: 3px; }
+    .msg-hover-actions { display: flex; gap: 4px; margin-top: 3px; opacity: 0.78; }
+    .msg-hover-actions button { background: rgba(255,255,255,0.06); border: none; color: var(--text); border-radius: 7px; padding: 2px 6px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
+    .msg-reactions { display: flex; flex-wrap: wrap; gap: 4px; }
+    .msg-react-chip { background: rgba(255,255,255,0.14); border: none; border-radius: 999px; padding: 2px 7px; font-size: 11px; color: #fff; cursor: pointer; }
+
+    .reply-preview-bar { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; background: #171a24; border-top: 1px solid var(--border); border-left: 3px solid var(--accent); }
+    .reply-author { display: block; font-size: 11px; font-weight: 700; color: var(--accent); }
+    .reply-text { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; display: block; }
+    .reply-cancel-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; }
+
+    .chat-input-wrap { position: relative; background: var(--bg-sidebar); border-top: 1px solid var(--border); }
+    .emoji-popover { position: absolute; bottom: calc(100% + 6px); left: 8px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; background: #1a1e2c; border: 1px solid var(--border); padding: 8px; border-radius: 12px; z-index: 25; }
+    .emoji-popover button { background: none; border: none; font-size: 19px; padding: 4px; cursor: pointer; }
+    .chat-input-bar { padding: 10px 12px; display: flex; align-items: flex-end; gap: 7px; }
+    .chat-input-bar textarea { resize: none; max-height: 110px; padding: 9px 12px; border-radius: 14px; }
+    .chat-tool-btn, .chat-send-btn { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; flex-shrink: 0; display: grid; place-items: center; }
+    .chat-tool-btn { background: rgba(255,255,255,0.08); color: var(--text); }
+    .chat-send-btn { background: var(--accent); color: #fff; }
+    .voice-rec-bar { padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
+    .voice-rec-info { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+    .rec-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); }
+    .voice-rec-actions { display: flex; align-items: center; gap: 8px; }
+    .chat-drop-overlay { position: absolute; inset: 0; background: rgba(15,17,24,0.92); border: 2px dashed var(--accent); display: grid; place-items: center; font-weight: 700; z-index: 20; }
+
+    .participants-list { padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+    .p-list-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+    .p-list-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .p-mini-av { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+    .p-list-name { font-size: 13px; font-weight: 600; }
+    .p-list-role { font-size: 11px; color: var(--text-muted); }
+    .p-list-right { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+
+    /* ДОК И РЕАКЦИИ */
+    .reactions-overlay { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 40; }
+    .floating-reaction { position: absolute; bottom: 88px; display: flex; flex-direction: column; align-items: center; animation: floatUp 2.6s ease-out forwards; }
+    .floating-reaction .emoji { font-size: 34px; }
+    .floating-reaction .sender { background: rgba(0,0,0,0.75); padding: 2px 8px; border-radius: 999px; font-size: 11px; }
+    @keyframes floatUp { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 15% { transform: translateY(-20px) scale(1.1); opacity: 1; } 100% { transform: translateY(-230px); opacity: 0; } }
+
+    .control-dock { padding: 9px 14px calc(9px + env(safe-area-inset-bottom)); background: var(--bg-rail); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 10px; flex-shrink: 0; }
+    .dock-group { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; justify-content: center; }
+    .dock-btn { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 60px; padding: 7px 10px; border-radius: 11px; border: 1px solid var(--border); background: #232734; color: var(--text); cursor: pointer; }
+    .dock-btn.active { background: #2d3242; }
+    .dock-btn.off { background: rgba(218,55,60,0.22); border-color: rgba(218,55,60,0.55); color: #fecaca; }
+    .dock-btn.highlight { background: var(--accent); border-color: transparent; color: #fff; }
+    .dock-btn.danger { background: var(--danger); border-color: transparent; color: #fff; }
+    .dock-icon { display: grid; place-items: center; height: 20px; }
+    .dock-label { font-size: 10px; font-weight: 600; }
+
+    .badge-counter { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--success); color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; }
+    .react-anchor { position: relative; }
+    .reactions-picker { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 8px 10px; background: #191d2b; border: 1px solid var(--border); border-radius: 999px; z-index: 30; }
+    .reactions-picker button { background: none; border: none; font-size: 21px; cursor: pointer; }
+
+    /* МОДАЛКИ */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: grid; place-items: center; padding: 16px; z-index: 60; }
+    .modal-card { width: 100%; max-width: 540px; max-height: 90dvh; overflow-y: auto; padding: 20px; background: var(--bg-sidebar); border: 1px solid var(--border); border-radius: 16px; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .modal-body { display: flex; flex-direction: column; gap: 12px; }
+    .toggles-list { display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; cursor: pointer; }
+    .toggle-row input { width: 17px; height: 17px; accent-color: var(--accent); }
+    .advanced-box { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-size: 12px; }
+    .stats-box { margin-top: 8px; font-family: monospace; font-size: 12px; color: #a5b4fc; white-space: pre-wrap; }
+    .accounts-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; }
+    .acc-row { background: rgba(0,0,0,0.25); padding: 6px 8px; border-radius: 7px; font-size: 11.5px; color: var(--text-muted); }
+
+    .lightbox-inner { position: relative; max-width: 92vw; max-height: 90dvh; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .lightbox-inner img { max-width: 92vw; max-height: 78dvh; border-radius: 12px; }
+    .lightbox-close { position: absolute; top: -12px; right: -12px; width: 32px; height: 32px; border-radius: 50%; border: none; background: #fff; color: #111; display: grid; place-items: center; cursor: pointer; }
+    .lightbox-footer { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+
+    .toast-container { position: fixed; top: 58px; right: 14px; display: flex; flex-direction: column; gap: 8px; z-index: 80; pointer-events: none; }
+    .toast { background: #191d2b; border: 1px solid var(--border); border-left: 4px solid var(--accent); color: var(--text); padding: 9px 13px; border-radius: 10px; font-size: 13px; font-weight: 600; }
+
+    @media (max-width: 900px) {
+      .show-mobile { display: grid !important; }
+      .hide-mobile { display: none !important; }
+      .server-rail { width: 54px; }
+      .channel-sidebar { position: fixed; top: 0; bottom: 0; left: 54px; transform: translateX(-130%); transition: transform 0.2s; box-shadow: 12px 0 35px rgba(0,0,0,0.6); }
+      .channel-sidebar.open { transform: translateX(0); }
+      .stage-and-grid.has-stage { flex-direction: column; }
+      .stage-and-grid.has-stage .video-grid { flex: 0 0 135px; flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+      .stage-and-grid.has-stage .participant-tile { width: 195px; min-height: 120px; height: 100%; }
+      .main-workspace:not(.chat-fullscreen) .chat-drawer { position: fixed; inset: 50px 0 0 0; width: 100%; z-index: 50; }
+      .dock-btn { min-width: 46px; padding: 6px 8px; }
+    }
+  </style>
 </head>
 <body data-theme="indigo">
 
-  <!-- ==================== 1. ЭКРАН РЕГИСТРАЦИИ / ВХОДА ==================== -->
+  <!-- 1. ЭКРАН РЕГИСТРАЦИИ И ВХОДА -->
   <section id="authView" class="auth-view">
     <div class="auth-glow"></div>
     <div class="auth-card">
@@ -22,7 +353,7 @@
         </div>
         <div>
           <h1>Zcall</h1>
-          <p>Войди или зарегистрируйся, чтобы открыть чат и начать звонок</p>
+          <p>Зарегистрируйся или войди, чтобы открыть чат и начать звонок</p>
         </div>
       </div>
 
@@ -31,7 +362,6 @@
         <button id="authTabLogin" class="auth-tab" type="button">Войти</button>
       </div>
 
-      <!-- Форма регистрации -->
       <form id="regForm" class="auth-form" autocomplete="off">
         <div class="two-cols">
           <div class="field-group">
@@ -45,7 +375,7 @@
         </div>
         <div class="field-group">
           <label for="regEmail">Почта (уникальная)</label>
-          <input id="regEmail" type="text" maxlength="64" placeholder="pochta@mail.ru или код" required />
+          <input id="regEmail" type="text" maxlength="64" placeholder="pochta@mail.ru или 123" required />
         </div>
         <div class="field-group">
           <label for="regPassword">Пароль (можно одинаковый)</label>
@@ -55,7 +385,6 @@
         <button id="regSubmitBtn" class="auth-submit-btn" type="submit">Зарегистрироваться и открыть чат</button>
       </form>
 
-      <!-- Форма входа -->
       <form id="loginForm" class="auth-form hidden" autocomplete="off">
         <div class="field-group">
           <label for="loginIdentifier">Юз или Почта</label>
@@ -71,9 +400,8 @@
     </div>
   </section>
 
-  <!-- ==================== 2. ОСНОВНОЙ DISCORD-ИНТЕРФЕЙС (ПОСЛЕ РЕГИСТРАЦИИ) ==================== -->
+  <!-- 2. ОСНОВНОЙ DISCORD-ИНТЕРФЕЙС (ПОСЛЕ РЕГИСТРАЦИИ) -->
   <div id="appShell" class="discord-shell hidden">
-    <!-- Левая рельса комнат -->
     <nav class="server-rail" aria-label="Комнаты">
       <button id="homeRailBtn" class="rail-item brand-rail active" title="Zcall">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -83,12 +411,11 @@
       <button id="newRoomRailBtn" class="rail-item add-rail" title="Новая комната">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
       </button>
-
       <div class="rail-bottom">
         <button id="botRailBtn" class="rail-item" title="Проверка звонка с ботом">
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>
         </button>
-        <div class="theme-rail-dots" title="Цвет акцента">
+        <div class="theme-rail-dots" title="Тема">
           <button class="theme-dot active" data-set-theme="indigo" style="--dot:#5865f2"></button>
           <button class="theme-dot" data-set-theme="blue" style="--dot:#2d8cff"></button>
           <button class="theme-dot" data-set-theme="teal" style="--dot:#00c2cb"></button>
@@ -97,12 +424,9 @@
       </div>
     </nav>
 
-    <!-- Панель каналов и профиля -->
     <aside id="sidebarDrawer" class="channel-sidebar">
       <div class="channel-header">
-        <div class="channel-server-title">
-          <span id="sidebarRoomName">zcall-room</span>
-        </div>
+        <div class="channel-server-title"><span id="sidebarRoomName">zcall-room</span></div>
         <div class="channel-header-btns">
           <button id="copySidebarInviteBtn" class="mini-icon-btn" title="Пригласить по ссылке">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -134,13 +458,13 @@
             <label for="roomInput">Код комнаты</label>
             <div class="input-with-actions">
               <input id="roomInput" type="text" maxlength="48" />
-              <button id="genRoomBtn" class="icon-square-btn" title="Сменить / Новая комната">
+              <button id="genRoomBtn" class="icon-square-btn" title="Новая комната">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" x2="21" y1="20" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" x2="21" y1="15" y2="21"/><line x1="4" x2="9" y1="4" y2="9"/></svg>
               </button>
             </div>
           </div>
           <div class="field-group">
-            <label for="lobbyQualitySelect">Качество видео и экрана</label>
+            <label for="lobbyQualitySelect">Видео и экран</label>
             <select id="lobbyQualitySelect">
               <option value="720">720p · 30 FPS</option>
               <option value="1080" selected>1080p HQ · 60 FPS</option>
@@ -158,7 +482,6 @@
         </div>
       </div>
 
-      <!-- Нижняя плашка пользователя как в Discord -->
       <div class="discord-user-bar">
         <div class="user-bar-info">
           <div class="user-bar-avatar-wrap">
@@ -183,7 +506,6 @@
       </div>
     </aside>
 
-    <!-- Центральная рабочая часть -->
     <div class="main-column">
       <header class="room-topbar">
         <div class="topbar-left">
@@ -217,9 +539,7 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
             <span>Начать звонок</span>
           </button>
-          <button id="endCallTopBtn" class="end-call-btn hidden">
-            <span>Завершить звонок</span>
-          </button>
+          <button id="endCallTopBtn" class="end-call-btn hidden"><span>Завершить звонок</span></button>
           <button id="toggleBotBtn" class="topbar-icon-btn" title="Проверка звонка с ботом">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>
             <span class="hide-mobile">Тест-бот</span>
@@ -234,12 +554,8 @@
         <span>Браузер поставил звук собеседников на паузу.</span>
         <button id="unlockAudioBtn" class="alert-action-btn">Включить звук</button>
       </div>
+      <div id="reconnectBanner" class="alert-banner warn hidden"><span>Переподключение...</span></div>
 
-      <div id="reconnectBanner" class="alert-banner warn hidden">
-        <span>Переподключение к комнате...</span>
-      </div>
-
-      <!-- Сцена звонка + Чат -->
       <main id="mainWorkspace" class="main-workspace chat-fullscreen">
         <div id="stageAndGrid" class="stage-and-grid hidden">
           <div id="stageWrapper" class="stage-wrapper hidden">
@@ -257,11 +573,9 @@
             </div>
             <div id="stageVideoArea" class="stage-video-area"></div>
           </div>
-
           <div id="videoGrid" class="video-grid"></div>
         </div>
 
-        <!-- Чат (открыт сразу после регистрации!) -->
         <aside id="chatDrawer" class="chat-drawer">
           <div class="sidebar-top">
             <div class="sidebar-tabs">
@@ -274,14 +588,9 @@
           </div>
 
           <div id="chatTabPanel" class="tab-panel">
-            <div class="chat-status-strip">
-              <span id="typingIndicator" class="chat-substatus">Чат комнаты готов</span>
-            </div>
-
+            <div class="chat-status-strip"><span id="typingIndicator" class="chat-substatus">Чат комнаты готов</span></div>
             <div id="chatMessages" class="chat-messages">
-              <div class="chat-system-msg">
-                Добро пожаловать в Zcall! Нажмите «Начать звонок» сверху, чтобы говорить с видео и звуком, или общайтесь прямо здесь.
-              </div>
+              <div class="chat-system-msg">Добро пожаловать в Zcall! Нажмите «Начать звонок» сверху или общайтесь прямо здесь.</div>
             </div>
 
             <div id="replyPreviewBar" class="reply-preview-bar hidden">
@@ -296,31 +605,19 @@
 
             <div class="chat-input-wrap">
               <div id="emojiPopover" class="emoji-popover hidden">
-                <button type="button" data-ins="😀">😀</button>
-                <button type="button" data-ins="😂">😂</button>
-                <button type="button" data-ins="🔥">🔥</button>
-                <button type="button" data-ins="❤️">❤️</button>
-                <button type="button" data-ins="👍">👍</button>
-                <button type="button" data-ins="👏">👏</button>
-                <button type="button" data-ins="😎">😎</button>
-                <button type="button" data-ins="🎉">🎉</button>
-                <button type="button" data-ins="🤔">🤔</button>
-                <button type="button" data-ins="😭">😭</button>
-                <button type="button" data-ins="💯">💯</button>
-                <button type="button" data-ins="⚡">⚡</button>
+                <button type="button" data-ins="😀">😀</button><button type="button" data-ins="😂">😂</button>
+                <button type="button" data-ins="🔥">🔥</button><button type="button" data-ins="❤️">❤️</button>
+                <button type="button" data-ins="👍">👍</button><button type="button" data-ins="👏">👏</button>
+                <button type="button" data-ins="😎">😎</button><button type="button" data-ins="🎉">🎉</button>
+                <button type="button" data-ins="🤔">🤔</button><button type="button" data-ins="😭">😭</button>
+                <button type="button" data-ins="💯">💯</button><button type="button" data-ins="⚡">⚡</button>
               </div>
 
               <div id="voiceRecordingBar" class="voice-rec-bar hidden">
-                <div class="voice-rec-info">
-                  <span class="rec-dot"></span>
-                  <span>Запись голосового</span>
-                  <span id="voiceRecTimer" class="voice-rec-time">00:00</span>
-                </div>
+                <div class="voice-rec-info"><span class="rec-dot"></span><span>Запись</span><span id="voiceRecTimer" class="voice-rec-time">00:00</span></div>
                 <div class="voice-rec-actions">
                   <button id="voiceCancelBtn" class="ghost-btn">Отмена</button>
-                  <button id="voiceSendBtn" class="chat-send-btn" title="Отправить">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-                  </button>
+                  <button id="voiceSendBtn" class="chat-send-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
                 </div>
               </div>
 
@@ -341,15 +638,10 @@
                 </button>
               </div>
             </div>
-
-            <div id="chatDropOverlay" class="chat-drop-overlay hidden">
-              <span>Отпустите файл для отправки</span>
-            </div>
+            <div id="chatDropOverlay" class="chat-drop-overlay hidden"><span>Отпустите файл для отправки</span></div>
           </div>
 
-          <div id="participantsTabPanel" class="tab-panel hidden">
-            <div id="participantsList" class="participants-list"></div>
-          </div>
+          <div id="participantsTabPanel" class="tab-panel hidden"><div id="participantsList" class="participants-list"></div></div>
         </aside>
       </main>
 
@@ -357,56 +649,17 @@
 
       <footer id="callDockBar" class="control-dock hidden">
         <div class="dock-group">
-          <button id="micBtn" class="dock-btn active" title="Микрофон (M)">
-            <span class="dock-icon" id="micBtnIcon"></span>
-            <span class="dock-label">Микрофон</span>
-          </button>
-          <button id="camBtn" class="dock-btn active" title="Камера (V)">
-            <span class="dock-icon" id="camBtnIcon"></span>
-            <span class="dock-label">Камера</span>
-          </button>
-          <button id="screenBtn" class="dock-btn" title="Показать экран 1080p HQ">
-            <span class="dock-icon">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
-            </span>
-            <span class="dock-label">Экран</span>
-          </button>
-          <button id="handBtn" class="dock-btn" title="Поднять руку">
-            <span class="dock-icon">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
-            </span>
-            <span class="dock-label">Рука</span>
-          </button>
+          <button id="micBtn" class="dock-btn active"><span class="dock-icon" id="micBtnIcon"></span><span class="dock-label">Микрофон</span></button>
+          <button id="camBtn" class="dock-btn active"><span class="dock-icon" id="camBtnIcon"></span><span class="dock-label">Камера</span></button>
+          <button id="screenBtn" class="dock-btn"><span class="dock-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg></span><span class="dock-label">Экран</span></button>
+          <button id="handBtn" class="dock-btn"><span class="dock-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></span><span class="dock-label">Рука</span></button>
           <div class="react-anchor">
-            <button id="reactBtn" class="dock-btn" title="Реакции">
-              <span class="dock-icon">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
-              </span>
-              <span class="dock-label">Реакция</span>
-            </button>
-            <div id="reactionsPicker" class="reactions-picker hidden">
-              <button data-emoji="❤️">❤️</button>
-              <button data-emoji="🔥">🔥</button>
-              <button data-emoji="😂">😂</button>
-              <button data-emoji="👏">👏</button>
-              <button data-emoji="👍">👍</button>
-              <button data-emoji="🤯">🤯</button>
-            </div>
+            <button id="reactBtn" class="dock-btn"><span class="dock-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg></span><span class="dock-label">Реакция</span></button>
+            <div id="reactionsPicker" class="reactions-picker hidden"><button data-emoji="❤️">❤️</button><button data-emoji="🔥">🔥</button><button data-emoji="😂">😂</button><button data-emoji="👏">👏</button><button data-emoji="👍">👍</button><button data-emoji="🤯">🤯</button></div>
           </div>
-          <button id="chatToggleBtn" class="dock-btn highlight" title="Чат (C)">
-            <span class="dock-icon">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            </span>
-            <span class="dock-label">Чат</span>
-            <span id="chatBadge" class="badge-counter hidden">0</span>
-          </button>
+          <button id="chatToggleBtn" class="dock-btn highlight"><span class="dock-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="dock-label">Чат</span><span id="chatBadge" class="badge-counter hidden">0</span></button>
         </div>
-        <button id="leaveBtn" class="dock-btn danger" title="Завершить звонок">
-          <span class="dock-icon">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="22" x2="2" y1="2" y2="22"/></svg>
-          </span>
-          <span class="dock-label">Сброс</span>
-        </button>
+        <button id="leaveBtn" class="dock-btn danger"><span class="dock-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="22" x2="2" y1="2" y2="22"/></svg></span><span class="dock-label">Сброс</span></button>
       </footer>
     </div>
   </div>
@@ -416,84 +669,32 @@
     <div class="modal-card">
       <div class="modal-header">
         <h3>Настройки Zcall</h3>
-        <button id="closeSettingsBtn" class="icon-close-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
+        <button id="closeSettingsBtn" class="icon-close-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <div class="modal-body">
         <div class="two-cols">
-          <div class="field-group">
-            <label for="roomAudioSelect">Микрофон</label>
-            <select id="roomAudioSelect"></select>
-          </div>
-          <div class="field-group">
-            <label for="roomVideoSelect">Камера</label>
-            <select id="roomVideoSelect"></select>
-          </div>
+          <div class="field-group"><label for="roomAudioSelect">Микрофон</label><select id="roomAudioSelect"></select></div>
+          <div class="field-group"><label for="roomVideoSelect">Камера</label><select id="roomVideoSelect"></select></div>
         </div>
         <div class="two-cols">
-          <div class="field-group">
-            <label for="roomQualitySelect">Качество видео</label>
-            <select id="roomQualitySelect">
-              <option value="720">720p · 30 FPS</option>
-              <option value="1080">1080p HQ · 60 FPS</option>
-              <option value="4k">4K Ultra · 60 FPS</option>
-            </select>
-          </div>
-          <div class="field-group">
-            <label for="roomAudioPresetSelect">Качество звука</label>
-            <select id="roomAudioPresetSelect">
-              <option value="speech">Голос (24 kbps)</option>
-              <option value="hq">Студия (96 kbps)</option>
-              <option value="stereo">Стерео (128 kbps)</option>
-            </select>
-          </div>
+          <div class="field-group"><label for="roomQualitySelect">Качество видео</label><select id="roomQualitySelect"><option value="720">720p · 30 FPS</option><option value="1080">1080p HQ · 60 FPS</option><option value="4k">4K Ultra · 60 FPS</option></select></div>
+          <div class="field-group"><label for="roomAudioPresetSelect">Качество звука</label><select id="roomAudioPresetSelect"><option value="speech">Голос (24 kbps)</option><option value="hq">Студия (96 kbps)</option><option value="stereo">Стерео (128 kbps)</option></select></div>
         </div>
         <div class="two-cols">
-          <div class="field-group">
-            <label for="roomScreenModeSelect">Режим экрана</label>
-            <select id="roomScreenModeSelect">
-              <option value="motion">Видео / Игры (60 FPS)</option>
-              <option value="detail">Текст / Код (чёткость)</option>
-            </select>
-          </div>
-          <div class="field-group">
-            <label for="roomFilterSelect">Фильтр камеры</label>
-            <select id="roomFilterSelect">
-              <option value="none">Обычный</option>
-              <option value="cinematic">Кино-контраст</option>
-              <option value="warm">Тёплый</option>
-              <option value="neon">Насыщенный</option>
-              <option value="bw">Ч/Б</option>
-            </select>
-          </div>
+          <div class="field-group"><label for="roomScreenModeSelect">Режим экрана</label><select id="roomScreenModeSelect"><option value="motion">Видео / Игры (60 FPS)</option><option value="detail">Текст / Код (чёткость)</option></select></div>
+          <div class="field-group"><label for="roomFilterSelect">Фильтр камеры</label><select id="roomFilterSelect"><option value="none">Обычный</option><option value="cinematic">Кино-контраст</option><option value="warm">Тёплый</option><option value="neon">Насыщенный</option><option value="bw">Ч/Б</option></select></div>
         </div>
-        <div class="field-group">
-          <label for="roomThemeSelect">Тема интерфейса</label>
-          <select id="roomThemeSelect">
-            <option value="indigo">Индиго</option>
-            <option value="blue">Синий</option>
-            <option value="teal">Бирюзовый</option>
-            <option value="emerald">Изумрудный</option>
-          </select>
-        </div>
+        <div class="field-group"><label for="roomThemeSelect">Тема интерфейса</label><select id="roomThemeSelect"><option value="indigo">Индиго</option><option value="blue">Синий</option><option value="teal">Бирюзовый</option><option value="emerald">Изумрудный</option></select></div>
         <div class="toggles-list">
           <label class="toggle-row"><span>Студийный микрофон (без шумодава)</span><input id="cleanMicToggle" type="checkbox" /></label>
           <label class="toggle-row"><span>Отражать свою камеру</span><input id="mirrorSelfToggle" type="checkbox" checked /></label>
           <label class="toggle-row"><span>Звуки интерфейса</span><input id="uiSoundsToggle" type="checkbox" checked /></label>
         </div>
-
         <details class="advanced-box">
           <summary>Зарегистрированные аккаунты и статистика</summary>
           <div id="accountsRegistryList" class="accounts-list"></div>
           <button id="clearAccountsBtn" class="ghost-btn" style="margin-top:8px;">Очистить базу аккаунтов (для теста)</button>
-          <div class="field-group" style="margin-top:10px;">
-            <label for="sandboxIdInput">LiveKit Sandbox ID</label>
-            <div class="input-with-actions">
-              <input id="sandboxIdInput" type="text" />
-              <button id="saveSandboxBtn" class="ghost-btn">Сохранить</button>
-            </div>
-          </div>
+          <div class="field-group" style="margin-top:10px;"><label for="sandboxIdInput">LiveKit Sandbox ID</label><div class="input-with-actions"><input id="sandboxIdInput" type="text" /><button id="saveSandboxBtn" class="ghost-btn">Сохранить</button></div></div>
           <pre id="statsBox" class="stats-box">Ожидание...</pre>
         </details>
       </div>
@@ -503,18 +704,904 @@
   <!-- ПРОСМОТР КАРТИНОК -->
   <div id="lightboxModal" class="modal-backdrop hidden">
     <div class="lightbox-inner">
-      <button id="closeLightboxBtn" class="lightbox-close">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
+      <button id="closeLightboxBtn" class="lightbox-close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       <img id="lightboxImg" alt="Просмотр" />
-      <div class="lightbox-footer">
-        <span id="lightboxCaption"></span>
-        <a id="lightboxDownload" class="ghost-btn" download>Скачать</a>
-      </div>
+      <div class="lightbox-footer"><span id="lightboxCaption"></span><a id="lightboxDownload" class="ghost-btn" download>Скачать</a></div>
     </div>
   </div>
 
   <div id="toastContainer" class="toast-container"></div>
-  <script src="app.js"></script>
+
+  <script>
+  (() => {
+    const DEFAULT_SANDBOX_ID = "p_2qxku4v66yr";
+    const SANDBOX_ENDPOINT = "https://cloud-api.livekit.io/api/sandbox/connection-details";
+    const ACCOUNTS_KEY = "zcall_accounts_v1";
+    const SESSION_KEY = "zcall_session_v1";
+
+    const LK = window.LivekitClient;
+    const $ = (id) => document.getElementById(id);
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const canScreenShare = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+
+    const SVG = {
+      micOn: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>',
+      micOff: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" x2="22" y1="2" y2="22"/><path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2"/><path d="M5 10v2a7 7 0 0 0 12 5"/><path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12"/><line x1="12" x2="12" y1="19" y2="22"/></svg>',
+      camOn: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>',
+      camOff: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.66 6H14a2 2 0 0 1 2 2v2.5l5.248-3.062A.5.5 0 0 1 22 7.87v8.196"/><path d="M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"/><path d="m2 2 20 20"/></svg>',
+      pin: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="17" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>',
+      reply: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>',
+      copy: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>',
+      play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
+      pause: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
+      download: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
+      checks: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>'
+    };
+
+    const state = {
+      sandboxId: localStorage.getItem("zcall_sandbox_id") || DEFAULT_SANDBOX_ID,
+      theme: localStorage.getItem("zcall_theme") || "indigo",
+      user: null,
+      roomName: "",
+      savedRooms: JSON.parse(localStorage.getItem("zcall_rooms") || "[]"),
+      inCall: false, micEnabled: true, camEnabled: false,
+      mirrorSelf: localStorage.getItem("zcall_mirror") !== "false",
+      uiSounds: localStorage.getItem("zcall_sounds") !== "false",
+      cleanMic: localStorage.getItem("zcall_clean_mic") === "true",
+      quality: localStorage.getItem("zcall_quality") || "1080",
+      audioPreset: localStorage.getItem("zcall_audio_preset") || "hq",
+      screenMode: localStorage.getItem("zcall_screen_mode") || "motion",
+      filter: localStorage.getItem("zcall_filter") || "none",
+      audioDeviceId: "", videoDeviceId: "",
+      room: null, isConnecting: false, localIdentity: "",
+      handRaised: false, screenSharing: false, pinnedIdentity: null,
+      callStartedAt: 0, timerInterval: null, statsInterval: null,
+      profiles: new Map(), audioEls: new Map(), volumes: new Map(),
+      chatOpen: true, unreadCount: 0, messages: [], replyTo: null,
+      typingTimer: null, lastTypingSent: 0, voiceRecorder: null, voiceChunks: [], voiceTimerInt: null, voiceStartedAt: 0,
+      botEnabled: false, botSpeaking: false, botScreenTest: false, botEchoRecording: false
+    };
+
+    function uid(len = 6) { return Math.random().toString(36).slice(2, 2 + len); }
+    function toAsciiId(str, fallback = "user") {
+      const map = { а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"yo",ж:"zh",з:"z",и:"i",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"kh",ц:"ts",ч:"ch",ш:"sh",щ:"shch",ъ:"",ы:"y",ь:"",э:"e",ю:"yu",я:"ya" };
+      const tr = (str || "").toLowerCase().split("").map((c) => map[c] ?? c).join("");
+      return tr.replace(/[^a-z0-9_-]/g, "").slice(0, 20) || fallback;
+    }
+    function randomRoomName() {
+      const w = ["nova","cyber","cosmos","pulse","vibe","aurora","pixel","turbo"];
+      return `zcall-${w[Math.floor(Math.random() * w.length)]}-${uid(4)}`;
+    }
+    function formatTime(ts = Date.now()) { return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
+    function formatSec(sec) { return `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(Math.floor(sec % 60)).padStart(2, "0")}`; }
+    function formatBytes(b) { return !b ? "" : b < 1024 ? `${b} Б` : b < 1048576 ? `${(b/1024).toFixed(1)} КБ` : `${(b/1048576).toFixed(2)} МБ`; }
+
+    async function hashPass(str) {
+      try {
+        const buf = await crypto.subtle.digest("SHA-256", encoder.encode(str));
+        return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      } catch { return btoa(unescape(encodeURIComponent(str))); }
+    }
+    function getAccounts() { try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || "[]"); } catch { return []; } }
+    function saveAccounts(list) { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list)); }
+
+    function showToast(msg) {
+      const el = document.createElement("div"); el.className = "toast"; el.textContent = msg;
+      $("toastContainer").appendChild(el); setTimeout(() => el.remove(), 3400);
+    }
+
+    let sfxCtx = null;
+    function playSfx(type) {
+      if (!state.uiSounds) return;
+      try {
+        sfxCtx = sfxCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (sfxCtx.state === "suspended") sfxCtx.resume();
+        const now = sfxCtx.currentTime, osc = sfxCtx.createOscillator(), g = sfxCtx.createGain();
+        osc.connect(g); g.connect(sfxCtx.destination);
+        if (type === "join") { osc.frequency.setValueAtTime(520, now); osc.frequency.exponentialRampToValueAtTime(780, now + 0.14); g.gain.setValueAtTime(0.06, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.22); osc.start(now); osc.stop(now + 0.23); }
+        else if (type === "chat") { osc.frequency.setValueAtTime(860, now); g.gain.setValueAtTime(0.04, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.12); osc.start(now); osc.stop(now + 0.13); }
+      } catch (_) {}
+    }
+
+    function applyTheme(theme) {
+      state.theme = theme; localStorage.setItem("zcall_theme", theme);
+      document.body.setAttribute("data-theme", theme);
+      document.querySelectorAll("[data-set-theme]").forEach((b) => b.classList.toggle("active", b.dataset.setTheme === theme));
+      if ($("roomThemeSelect")) $("roomThemeSelect").value = theme;
+    }
+
+    function displayNameOf(p) {
+      if (!p) return "Участник";
+      const id = p.identity || "", prof = state.profiles.get(id);
+      if (prof?.name) return prof.name;
+      if (p.name) return p.name;
+      return id.includes("_") ? id.split("_")[0] : id;
+    }
+
+    function getInviteUrl(roomName) {
+      const clean = (roomName || state.roomName || randomRoomName()).trim();
+      return `${window.location.href.split("#")[0].split("?")[0]}#${encodeURIComponent(clean)}`;
+    }
+    async function copyInviteLink(roomName) {
+      const url = getInviteUrl(roomName);
+      try { await navigator.clipboard.writeText(url); showToast("Ссылка скопирована"); }
+      catch { prompt("Скопируй ссылку для друга:", url); }
+    }
+
+    /* РЕГИСТРАЦИЯ И ВХОД */
+    function showAuthTab(tab) {
+      const isReg = tab === "reg";
+      $("authTabReg").classList.toggle("active", isReg);
+      $("authTabLogin").classList.toggle("active", !isReg);
+      $("regForm").classList.toggle("hidden", !isReg);
+      $("loginForm").classList.toggle("hidden", isReg);
+      $("regError").textContent = ""; $("loginError").textContent = "";
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const username = $("regUsername").value.trim().replace(/^@+/, "");
+      const nick = $("regNick").value.trim();
+      const email = $("regEmail").value.trim();
+      const password = $("regPassword").value;
+      const errEl = $("regError"); errEl.textContent = "";
+
+      if (!username || !nick || !email || !password) { errEl.textContent = "Заполни все поля."; return; }
+      const accounts = getAccounts();
+      const emailTaken = accounts.some((a) => a.emailLower === email.toLowerCase());
+      const userTaken = accounts.some((a) => a.usernameLower === username.toLowerCase());
+
+      if (emailTaken && userTaken) { errEl.textContent = "Такая почта и такой юз уже заняты! Придумай другие."; return; }
+      if (emailTaken) { errEl.textContent = "Эта почта уже зарегистрирована! С ней нельзя создать второй аккаунт."; return; }
+      if (userTaken) { errEl.textContent = `Юз @${username} уже занят! Выбери другой.`; return; }
+
+      const passHash = await hashPass(password);
+      const acc = { id: uid(8), username, usernameLower: username.toLowerCase(), nick, email, emailLower: email.toLowerCase(), passHash, createdAt: Date.now() };
+      accounts.push(acc); saveAccounts(accounts);
+
+      const session = { id: acc.id, username: acc.username, nick: acc.nick, email: acc.email };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      state.user = session;
+      enterAppShell();
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const ident = $("loginIdentifier").value.trim().replace(/^@+/, "").toLowerCase();
+      const passHash = await hashPass($("loginPassword").value);
+      const errEl = $("loginError"); errEl.textContent = "";
+      const acc = getAccounts().find((a) => (a.usernameLower === ident || a.emailLower === ident) && a.passHash === passHash);
+      if (!acc) { errEl.textContent = "Неверный юз/почта или пароль."; return; }
+      const session = { id: acc.id, username: acc.username, nick: acc.nick, email: acc.email };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      state.user = session;
+      enterAppShell();
+    }
+
+    async function logoutAccount() {
+      await disconnectLiveKit();
+      localStorage.removeItem(SESSION_KEY);
+      state.user = null;
+      $("appShell").classList.add("hidden");
+      $("authView").classList.remove("hidden");
+      showAuthTab("login");
+    }
+
+    function renderAccountsRegistry() {
+      const box = $("accountsRegistryList"); if (!box) return;
+      const list = getAccounts(); box.innerHTML = "";
+      if (!list.length) { box.innerHTML = '<div class="acc-row">Пока нет аккаунтов</div>'; return; }
+      list.forEach((a) => {
+        const row = document.createElement("div"); row.className = "acc-row";
+        row.textContent = `${a.nick} · @${a.username} · почта: ${a.email}`;
+        box.appendChild(row);
+      });
+    }
+
+    /* ВХОД В DISCORD ЧАТ */
+    function saveRecentRoom(name) {
+      if (!name || name.startsWith("zcall-test-")) return;
+      state.savedRooms = [name, ...state.savedRooms.filter((r) => r !== name)].slice(0, 6);
+      localStorage.setItem("zcall_rooms", JSON.stringify(state.savedRooms));
+      renderRailRooms();
+    }
+    function renderRailRooms() {
+      const box = $("serverRoomsRail"); box.innerHTML = "";
+      state.savedRooms.forEach((rName) => {
+        const btn = document.createElement("button");
+        btn.className = `rail-item ${state.roomName === rName ? "active" : ""}`;
+        btn.title = rName; btn.textContent = rName.replace(/^zcall-/i, "").slice(0, 2).toUpperCase() || "ZC";
+        btn.onclick = () => switchRoomFast(rName); box.appendChild(btn);
+      });
+    }
+    function updateUserBarUI() {
+      const nick = state.user?.nick || "Гость", handle = state.user?.username ? `@${state.user.username}` : "В сети";
+      $("userPanelName").textContent = nick;
+      $("userPanelHandle").textContent = state.inCall ? "В звонке" : handle;
+      $("userPanelAvatar").textContent = (nick[0] || "Z").toUpperCase();
+      $("userPanelMicBtn").className = `mini-icon-btn ${state.micEnabled ? "" : "off"}`;
+      $("userPanelMicBtn").innerHTML = state.micEnabled ? SVG.micOn : SVG.micOff;
+      $("userPanelCamBtn").className = `mini-icon-btn ${state.camEnabled ? "" : "off"}`;
+      $("userPanelCamBtn").innerHTML = state.camEnabled ? SVG.camOn : SVG.camOff;
+    }
+    function setConnStatus(kind, text) {
+      $("connStatusPill").querySelector(".status-dot").className = `status-dot ${kind}`;
+      $("connStatusPill").querySelector("span:last-child").textContent = text;
+    }
+
+    async function enterAppShell() {
+      $("authView").classList.add("hidden");
+      $("appShell").classList.remove("hidden");
+      const hashRoom = decodeURIComponent((window.location.hash || "").replace(/^#/, "")).trim();
+      const queryRoom = new URLSearchParams(window.location.search).get("room");
+      state.roomName = hashRoom || queryRoom || state.roomName || randomRoomName();
+      $("roomInput").value = state.roomName;
+      $("sidebarRoomName").textContent = state.roomName;
+      $("roomTitleBadge").textContent = `общий-чат · ${state.roomName}`;
+      $("sandboxIdInput").value = state.sandboxId;
+      saveRecentRoom(state.roomName);
+      updateUserBarUI(); syncRoomSettingsUI(); updateCallLayoutUI();
+      await connectRoomChatOnly(state.roomName);
+    }
+
+    async function fetchSandboxTokenWithTimeout(roomName, identity) {
+      const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const res = await fetch(SANDBOX_ENDPOINT, {
+          method: "POST", signal: ctrl.signal,
+          headers: { "X-Sandbox-ID": state.sandboxId, "Content-Type": "application/json" },
+          body: JSON.stringify({ room_name: toAsciiId(roomName, "zcall-room"), participant_name: identity })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = await res.json();
+        return { serverUrl: d.serverUrl || d.server_url, token: d.participantToken || d.participant_token };
+      } finally { clearTimeout(timer); }
+    }
+
+    async function disconnectLiveKit() {
+      clearInterval(state.timerInterval); clearInterval(state.statsInterval);
+      stopBotEngine(); finishVoiceRecord(false);
+      for (const it of state.audioEls.values()) it.el.remove();
+      state.audioEls.clear(); state.profiles.clear();
+      if (state.room) { const r = state.room; state.room = null; try { await r.disconnect(); } catch (_) {} }
+      state.inCall = false; state.screenSharing = false; state.handRaised = false; state.pinnedIdentity = null;
+    }
+
+    async function connectRoomChatOnly(roomName) {
+      if (!LK) { setConnStatus("bad", "SDK не загружен"); return; }
+      if (state.isConnecting) return;
+      state.isConnecting = true;
+      setConnStatus("warn", "Подключение...");
+      $("typingIndicator").textContent = "Подключение к комнате...";
+
+      await disconnectLiveKit();
+      state.roomName = roomName;
+      window.location.hash = encodeURIComponent(roomName);
+      $("sidebarRoomName").textContent = roomName;
+      $("roomTitleBadge").textContent = `общий-чат · ${roomName}`;
+      $("roomInput").value = roomName;
+
+      const nick = state.user?.nick || "Гость", uname = state.user?.username || "user";
+      state.localIdentity = `${toAsciiId(uname, "user")}_${uid(5)}`;
+
+      try {
+        const { serverUrl, token } = await fetchSandboxTokenWithTimeout(roomName, state.localIdentity);
+        const room = new LK.Room({ adaptiveStream: true, dynacast: true, publishDefaults: getPublishDefaults() });
+        state.room = room;
+        setupRoomEvents(room);
+        await Promise.race([
+          room.connect(serverUrl, token, { autoSubscribe: true }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error("Таймаут (10с)")), 10000))
+        ]);
+        state.profiles.set(state.localIdentity, { name: nick, username: uname, filter: state.filter, handRaised: false });
+        setConnStatus("good", "Чат онлайн");
+        $("typingIndicator").textContent = "Чат комнаты · онлайн";
+        broadcastProfile(); renderAllTiles();
+      } catch (err) {
+        setConnStatus("bad", "Повторить");
+        $("typingIndicator").textContent = `Ошибка: ${err.message}`;
+      } finally { state.isConnecting = false; }
+    }
+
+    async function switchRoomFast(newRoom) {
+      const clean = (newRoom || "").trim() || randomRoomName();
+      state.messages = [];
+      $("chatMessages").innerHTML = '<div class="chat-system-msg">Переход в комнату...</div>';
+      saveRecentRoom(clean);
+      await connectRoomChatOnly(clean);
+      updateCallLayoutUI();
+      showToast(`Открыта комната ${clean}`);
+    }
+
+    /* ЗВОНОК */
+    function updateCallLayoutUI() {
+      const inCall = state.inCall;
+      $("startCallTopBtn").classList.toggle("hidden", inCall);
+      $("endCallTopBtn").classList.toggle("hidden", !inCall);
+      $("roomLiveStats").classList.toggle("hidden", !inCall);
+      $("stageAndGrid").classList.toggle("hidden", !inCall);
+      $("callDockBar").classList.toggle("hidden", !inCall);
+      $("mainWorkspace").classList.toggle("chat-fullscreen", !inCall);
+      $("closeChatBtn").classList.toggle("hidden", !inCall);
+      $("navTextChannelBtn").classList.toggle("active", !inCall);
+      $("navVoiceChannelBtn").classList.toggle("active", inCall);
+      if (!inCall) $("chatDrawer").classList.remove("hidden");
+      else $("chatDrawer").classList.toggle("hidden", !(window.innerWidth >= 900 ? true : state.chatOpen));
+      updateDockButtons();
+    }
+
+    async function startCall({ withBot = false } = {}) {
+      if (!state.room) { await connectRoomChatOnly(state.roomName); if (!state.room) { showToast("Нет подключения к серверу"); return; } }
+      state.inCall = true; state.micEnabled = true;
+      if (withBot) state.botEnabled = true;
+      updateCallLayoutUI(); startCallTimers(); renderAllTiles(); playSfx("join");
+      if (withBot) startBotEngine(true);
+
+      const micP = Promise.race([state.room.localParticipant.setMicrophoneEnabled(true, getAudioCaptureOpts()), new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 6000))])
+        .catch(() => { state.micEnabled = false; showToast("Микрофон не удалось включить"); });
+      let camP = Promise.resolve();
+      if (state.camEnabled) {
+        camP = Promise.race([state.room.localParticipant.setCameraEnabled(true, getVideoCaptureOpts()), new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 7000))])
+          .catch(() => { state.camEnabled = false; showToast("Камера не отвечает или занята"); });
+      }
+      await Promise.allSettled([micP, camP]);
+      updateDockButtons(); renderAllTiles(); loadDevices();
+    }
+
+    async function endCall() {
+      clearInterval(state.timerInterval); clearInterval(state.statsInterval);
+      stopBotEngine(); state.inCall = false; state.screenSharing = false; state.handRaised = false; state.pinnedIdentity = null;
+      if (state.room) {
+        await Promise.allSettled([state.room.localParticipant.setMicrophoneEnabled(false), state.room.localParticipant.setCameraEnabled(false), state.room.localParticipant.setScreenShareEnabled(false)]);
+      }
+      updateCallLayoutUI(); renderAllTiles();
+    }
+
+    /* КАЧЕСТВО */
+    function getVideoCaptureOpts() {
+      const dev = state.videoDeviceId ? { deviceId: state.videoDeviceId } : {};
+      if (state.quality === "4k") return { ...dev, resolution: { width: 3840, height: 2160, frameRate: 30 } };
+      if (state.quality === "720") return { ...dev, resolution: { width: 1280, height: 720, frameRate: 30 } };
+      return { ...dev, resolution: { width: 1920, height: 1080, frameRate: 30 } };
+    }
+    function getAudioCaptureOpts() {
+      const dev = state.audioDeviceId ? { deviceId: state.audioDeviceId } : {};
+      if (state.cleanMic || state.audioPreset === "stereo") return { ...dev, autoGainControl: false, echoCancellation: true, noiseSuppression: false };
+      return { ...dev, autoGainControl: true, echoCancellation: true, noiseSuppression: true };
+    }
+    function getPublishDefaults() {
+      const camEnc = state.quality === "4k" ? { maxBitrate: 10_000_000, maxFramerate: 60 } : state.quality === "720" ? { maxBitrate: 1_700_000, maxFramerate: 30 } : { maxBitrate: 4_500_000, maxFramerate: 60 };
+      const scrEnc = state.quality === "4k" ? { maxBitrate: 14_000_000, maxFramerate: 60 } : state.quality === "720" ? { maxBitrate: 2_500_000, maxFramerate: 30 } : { maxBitrate: 8_000_000, maxFramerate: 60 };
+      const audioPreset = state.audioPreset === "stereo" ? LK.AudioPresets.musicHighQualityStereo : state.audioPreset === "speech" ? LK.AudioPresets.speech : LK.AudioPresets.musicHighQuality;
+      return { audioPreset, forceStereo: state.audioPreset === "stereo", dtx: state.audioPreset === "speech", red: true, videoEncoding: camEnc, screenShareEncoding: scrEnc, simulcast: true, videoCodec: "vp9", backupCodec: { codec: "vp8" } };
+    }
+    function getScreenCaptureOpts() {
+      const opts = { audio: true, contentHint: state.screenMode === "detail" ? "detail" : "motion" };
+      if (!isSafari) opts.resolution = state.quality === "4k" ? { width: 3840, height: 2160, frameRate: 60 } : state.quality === "720" ? { width: 1280, height: 720, frameRate: 30 } : { width: 1920, height: 1080, frameRate: 60 };
+      return opts;
+    }
+
+    async function loadDevices() {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const fill = (sel, list, prefix, cur) => {
+        if (!sel) return; sel.innerHTML = "";
+        if (!list.length) { const o = document.createElement("option"); o.value = ""; o.textContent = "Нет устройств"; sel.appendChild(o); return; }
+        list.forEach((d, i) => { const o = document.createElement("option"); o.value = d.deviceId; o.textContent = d.label || `${prefix} #${i + 1}`; sel.appendChild(o); });
+        if (cur && list.some((d) => d.deviceId === cur)) sel.value = cur;
+      };
+      fill($("roomAudioSelect"), devices.filter((d) => d.kind === "audioinput"), "Микрофон", state.audioDeviceId);
+      fill($("roomVideoSelect"), devices.filter((d) => d.kind === "videoinput"), "Камера", state.videoDeviceId);
+    }
+
+    function setupRoomEvents(room) {
+      const RE = LK.RoomEvent;
+      room.registerByteStreamHandler("zcall-file", async (reader, participantInfo) => {
+        try {
+          const info = reader.info || {}, res = await reader.readAll(), chunks = Array.isArray(res) ? res : [res], mime = info.mimeType || "application/octet-stream";
+          const url = URL.createObjectURL(new Blob(chunks, { type: mime })), sender = getParticipantByIdentity(participantInfo?.identity), fname = info.name || "file";
+          const isVoice = fname.startsWith("zcall-voice-") || mime.startsWith("audio/"), isImg = !isVoice && mime.startsWith("image/");
+          appendChatMessage({ id: info.id || uid(8), senderIdentity: participantInfo?.identity || "remote", senderName: displayNameOf(sender) || "Участник", voiceUrl: isVoice ? url : null, imageUrl: isImg ? url : null, fileUrl: !isImg && !isVoice ? url : null, fileName: fname, fileSize: info.size, time: Date.now() });
+        } catch (_) {}
+      });
+      room
+        .on(RE.ParticipantConnected, (p) => { showToast(`${displayNameOf(p)} в комнате`); setTimeout(broadcastProfile, 350); renderAllTiles(); })
+        .on(RE.ParticipantDisconnected, (p) => { cleanupParticipantAudio(p.identity); if (state.pinnedIdentity === p.identity) state.pinnedIdentity = null; renderAllTiles(); })
+        .on(RE.TrackSubscribed, (t, pub, p) => { if (t.kind === LK.Track.Kind.Audio) attachRemoteAudio(t, pub, p); renderAllTiles(); })
+        .on(RE.TrackUnsubscribed, (t, pub, p) => { t.detach().forEach((el) => el.remove()); if (t.kind === LK.Track.Kind.Audio) removeAudioEl(`${p.identity}_${pub.source}`); renderAllTiles(); })
+        .on(RE.LocalTrackPublished, () => renderAllTiles()).on(RE.LocalTrackUnpublished, () => renderAllTiles())
+        .on(RE.TrackMuted, () => renderAllTiles()).on(RE.TrackUnmuted, () => renderAllTiles())
+        .on(RE.ActiveSpeakersChanged, (speakers) => {
+          const ids = new Set(speakers.map((s) => s.identity));
+          document.querySelectorAll(".participant-tile").forEach((tile) => tile.classList.toggle("speaking", tile.dataset.identity === "zcall-bot" ? state.botSpeaking : ids.has(tile.dataset.identity)));
+        })
+        .on(RE.AudioPlaybackStatusChanged, () => $("audioUnlockBanner").classList.toggle("hidden", room.canPlaybackAudio))
+        .on(RE.Reconnecting, () => $("reconnectBanner").classList.remove("hidden"))
+        .on(RE.Reconnected, () => $("reconnectBanner").classList.add("hidden"))
+        .on(RE.DataReceived, (payload, participant, _k, topic) => { try { handleIncomingData(topic, JSON.parse(decoder.decode(payload)), participant); } catch (_) {} });
+    }
+
+    function getParticipantByIdentity(id) { return (!state.room || !id) ? null : id === state.localIdentity ? state.room.localParticipant : state.room.remoteParticipants.get(id) || null; }
+    async function sendData(topic, obj, reliable = true) { if (!state.room) return false; try { await state.room.localParticipant.publishData(encoder.encode(JSON.stringify(obj)), { reliable, topic }); return true; } catch { return false; } }
+    function broadcastProfile() { sendData("zcall-profile", { name: state.user?.nick || "Гость", username: state.user?.username || "", filter: state.filter, handRaised: state.handRaised }); }
+
+    function handleIncomingData(topic, data, participant) {
+      const id = participant?.identity;
+      if (topic === "zcall-profile" && id) { state.profiles.set(id, { name: data.name || displayNameOf(participant), username: data.username || "", filter: data.filter || "none", handRaised: !!data.handRaised }); renderAllTiles(); }
+      else if (topic === "zcall-reaction") spawnFloatingReaction(data.emoji, data.name || displayNameOf(participant));
+      else if (topic === "zcall-chat") appendChatMessage({ id: data.id, senderIdentity: id || data.senderIdentity, senderName: data.senderName || displayNameOf(participant), text: data.text, replyTo: data.replyTo || null, time: data.time || Date.now() });
+      else if (topic === "zcall-chat-react") applyMessageReaction(data.msgId, data.emoji, id || data.senderIdentity);
+      else if (topic === "zcall-typing") showRemoteTyping(data.name || displayNameOf(participant));
+    }
+
+    function attachRemoteAudio(track, pub, participant) {
+      const key = `${participant.identity}_${pub.source}`; removeAudioEl(key);
+      const el = track.attach(); el.autoplay = true; el.playsInline = true; el.style.display = "none";
+      el.volume = Math.max(0, Math.min(1, (state.volumes.get(participant.identity) ?? 100) / 100));
+      document.body.appendChild(el); state.audioEls.set(key, { el, identity: participant.identity });
+      el.play().catch(() => { if (state.room && !state.room.canPlaybackAudio) $("audioUnlockBanner").classList.remove("hidden"); });
+    }
+    function removeAudioEl(k) { const it = state.audioEls.get(k); if (it) { it.el.remove(); state.audioEls.delete(k); } }
+    function cleanupParticipantAudio(id) { for (const [k, it] of state.audioEls.entries()) if (it.identity === id) { it.el.remove(); state.audioEls.delete(k); } }
+    function setParticipantVolume(id, v) { state.volumes.set(id, v); for (const it of state.audioEls.values()) if (it.identity === id) it.el.volume = Math.max(0, Math.min(1, v / 100)); }
+
+    /* ТЕСТ-БОТ */
+    function startBotEngine(report = false) {
+      state.botEnabled = true; $("toggleBotBtn").classList.add("active"); renderAllTiles();
+      if (report) setTimeout(() => appendChatMessage({ id: uid(8), senderIdentity: "zcall-bot", senderName: "Zcall Бот", text: `Проверка звонка запущена!\n• Аккаунт: ${state.user?.nick} (@${state.user?.username})\n• Комната: ${state.roomName}\n• Связь: ${state.room ? "LiveKit онлайн" : "Ожидание"}\n\nНажми «Эхо-тест 4с» на моей карточке или напиши сюда («фото», «голос», «экран»).`, time: Date.now() }), 300);
+    }
+    function stopBotEngine() { state.botEnabled = false; state.botScreenTest = false; state.botSpeaking = false; $("toggleBotBtn").classList.remove("active"); renderAllTiles(); }
+
+    function mountBotCanvasLoop(canvas, isStage = false) {
+      if (!canvas) return;
+      canvas.width = isStage ? 1280 : 640; canvas.height = isStage ? 720 : 400;
+      const ctx = canvas.getContext("2d"); let t = 0;
+      const draw = () => {
+        if (!state.botEnabled || !document.body.contains(canvas)) return;
+        t += 0.04; const w = canvas.width, h = canvas.height;
+        const g = ctx.createLinearGradient(0, 0, w, h); g.addColorStop(0, "#0b1020"); g.addColorStop(1, "#161d36");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = "rgba(88, 101, 242, 0.35)"; ctx.lineWidth = isStage ? 2 : 1.5;
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          for (let x = 0; x <= w; x += 24) { const y = h / 2 + Math.sin(x * 0.012 + t + i * 1.4) * ((state.botSpeaking ? 36 : 14) * (1 - i * 0.2)); if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+          ctx.stroke();
+        }
+        const r = (isStage ? 70 : 42) + (state.botSpeaking ? Math.sin(t * 4) * 8 : 0);
+        ctx.beginPath(); ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2);
+        ctx.fillStyle = state.botSpeaking ? "rgba(35, 165, 90, 0.25)" : "rgba(88, 101, 242, 0.22)"; ctx.fill();
+        ctx.strokeStyle = state.botSpeaking ? "#23a55a" : "#5865f2"; ctx.lineWidth = 3; ctx.stroke();
+        ctx.fillStyle = "#f2f4f8"; ctx.textAlign = "center"; ctx.font = `700 ${isStage ? 26 : 16}px Inter, sans-serif`;
+        ctx.fillText(isStage ? "Тест экрана · 1080p HQ" : "Zcall Тест-Бот", w / 2, h / 2 + (isStage ? 120 : 78));
+        ctx.fillStyle = "#949ba8"; ctx.font = `500 ${isStage ? 16 : 12}px Inter, sans-serif`;
+        ctx.fillText(state.botEchoRecording ? "Запись 4 сек..." : state.botSpeaking ? "Воспроизвожу эхо..." : "Готов к проверке", w / 2, h / 2 + (isStage ? 148 : 98));
+        requestAnimationFrame(draw);
+      };
+      requestAnimationFrame(draw);
+    }
+
+    async function runBotEchoTest() {
+      if (state.botEchoRecording) return;
+      let tempStream = null;
+      try {
+        const curTrack = state.room?.localParticipant?.getTrackPublication(LK.Track.Source.Microphone)?.track?.mediaStreamTrack;
+        const recStream = (curTrack && curTrack.readyState === "live" && state.micEnabled) ? new MediaStream([curTrack.clone()]) : (tempStream = await navigator.mediaDevices.getUserMedia({ audio: state.audioDeviceId ? { deviceId: state.audioDeviceId } : true }));
+        const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((m) => MediaRecorder.isTypeSupported?.(m)) || "";
+        const rec = mime ? new MediaRecorder(recStream, { mimeType: mime }) : new MediaRecorder(recStream), chunks = [];
+        state.botEchoRecording = true; showToast("Говорите — запись 4 секунды...");
+        rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+        rec.onstop = () => {
+          state.botEchoRecording = false; recStream.getTracks().forEach((t) => t.stop());
+          const url = URL.createObjectURL(new Blob(chunks, { type: mime || "audio/webm" })), audio = new Audio(url);
+          audio.volume = Math.max(0, Math.min(1, (state.volumes.get("zcall-bot") ?? 100) / 100));
+          state.botSpeaking = true; document.querySelector('.participant-tile[data-identity="zcall-bot"]')?.classList.add("speaking");
+          audio.onended = () => { state.botSpeaking = false; document.querySelector('.participant-tile[data-identity="zcall-bot"]')?.classList.remove("speaking"); URL.revokeObjectURL(url); };
+          audio.play().catch(() => { state.botSpeaking = false; });
+        };
+        rec.start(); setTimeout(() => { if (rec.state !== "inactive") rec.stop(); }, 4000);
+      } catch { state.botEchoRecording = false; tempStream?.getTracks().forEach((t) => t.stop()); showToast("Нет доступа к микрофону"); }
+    }
+
+    function makeTestImageBlob() {
+      return new Promise((res) => {
+        const c = document.createElement("canvas"); c.width = 800; c.height = 450; const ctx = c.getContext("2d");
+        const g = ctx.createLinearGradient(0, 0, 800, 450); g.addColorStop(0, "#1e1b4b"); g.addColorStop(1, "#0f172a");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 800, 450); ctx.strokeStyle = "#5865f2"; ctx.lineWidth = 4; ctx.strokeRect(24, 24, 752, 402);
+        ctx.fillStyle = "#fff"; ctx.font = "bold 34px Inter, sans-serif"; ctx.textAlign = "center"; ctx.fillText("Zcall · Тестовая картинка", 400, 220);
+        c.toBlob(res, "image/png");
+      });
+    }
+    function makeTestVoiceWavBlob() {
+      const sr = 22050, len = Math.floor(sr * 1.4), buf = new ArrayBuffer(44 + len * 2), v = new DataView(buf);
+      const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+      ws(0, "RIFF"); v.setUint32(4, 36 + len * 2, true); ws(8, "WAVE"); ws(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); ws(36, "data"); v.setUint32(40, len * 2, true);
+      for (let i = 0; i < len; i++) { const t = i / sr, f = t < 0.45 ? 523.25 : t < 0.9 ? 659.25 : 783.99; v.setInt16(44 + i * 2, Math.sin(2 * Math.PI * f * t) * Math.exp(-3 * (t % 0.45)) * 12000, true); }
+      return new Blob([buf], { type: "audio/wav" });
+    }
+    async function runBotChatTest() {
+      const img = await makeTestImageBlob();
+      if (img) appendChatMessage({ id: uid(8), senderIdentity: "zcall-bot", senderName: "Zcall Бот", text: "Тест фото:", imageUrl: URL.createObjectURL(img), fileName: "test.png", time: Date.now() });
+      appendChatMessage({ id: uid(8), senderIdentity: "zcall-bot", senderName: "Zcall Бот", voiceUrl: URL.createObjectURL(makeTestVoiceWavBlob()), fileName: "voice.wav", time: Date.now() });
+    }
+    function handleBotReplyToUser(userMsg) {
+      if (!state.botEnabled) return;
+      const low = (userMsg.text || "").toLowerCase();
+      setTimeout(async () => {
+        if (!state.botEnabled) return;
+        applyMessageReaction(userMsg.id, "👍", "zcall-bot");
+        if (low.includes("фото") || low.includes("картин")) {
+          const blob = await makeTestImageBlob();
+          appendChatMessage({ id: uid(8), senderIdentity: "zcall-bot", senderName: "Zcall Бот", text: "Тестовое фото:", imageUrl: URL.createObjectURL(blob), fileName: "test.png", replyTo: { id: userMsg.id, senderName: userMsg.senderName, preview: userMsg.text }, time: Date.now() });
+        } else if (low.includes("голос")) {
+          appendChatMessage({ id: uid(8), senderIdentity: "zcall-bot", senderName: "Zcall Бот", voiceUrl: URL.createObjectURL(makeTestVoiceWavBlob()), fileName: "voice.wav", time: Date.now() });
+        } else if (low.includes("экран")) { state.botScreenTest = !state.botScreenTest; renderAllTiles(); }
+        else { appendChatMessage({ id: uid(8), senderIdentity: "zcall-bot", senderName: "Zcall Бот", text: `Принял: "${userMsg.text}". Чат работает!`, replyTo: { id: userMsg.id, senderName: userMsg.senderName, preview: userMsg.text }, time: Date.now() }); }
+      }, 500);
+    }
+
+    /* СЕТКА И ПАНЕЛИ */
+    function renderAllTiles() {
+      if (!state.room) return;
+      const allReal = [state.room.localParticipant, ...Array.from(state.room.remoteParticipants.values())];
+      const totalCount = allReal.length + (state.botEnabled ? 1 : 0);
+      $("participantCountNum").textContent = String(totalCount);
+      $("tabParticipantsCount").textContent = String(totalCount);
+      $("sidebarVoiceBadge").textContent = String(state.inCall ? totalCount : 0);
+
+      const tree = $("sidebarVoiceMembers"); tree.innerHTML = "";
+      if (state.inCall) {
+        allReal.forEach((p) => {
+          const row = document.createElement("div"); row.className = "tree-member";
+          const dot = document.createElement("span"); dot.className = "tree-dot";
+          const nm = document.createElement("span"); nm.textContent = p.identity === state.localIdentity ? (state.user?.nick || "Вы") : displayNameOf(p);
+          row.append(dot, nm); tree.appendChild(row);
+        });
+        if (state.botEnabled) { const r = document.createElement("div"); r.className = "tree-member"; r.innerHTML = '<span class="tree-dot"></span><span>Zcall Тест-Бот</span>'; tree.appendChild(r); }
+      }
+      renderParticipantsTab(allReal);
+      if (!state.inCall) return;
+
+      let stageTrack = null, stageOwner = null, isScreenOnStage = false, isBotStage = false;
+      for (const p of allReal) { const sp = p.getTrackPublication(LK.Track.Source.ScreenShare); if (sp?.track && !sp.isMuted) { stageTrack = sp.track; stageOwner = p; isScreenOnStage = true; break; } }
+      if (!stageTrack && state.botEnabled && state.botScreenTest) { isBotStage = true; isScreenOnStage = true; }
+      else if (!stageTrack && state.pinnedIdentity) { const pp = getParticipantByIdentity(state.pinnedIdentity), cp = pp?.getTrackPublication(LK.Track.Source.Camera); if (cp?.track && !cp.isMuted) { stageTrack = cp.track; stageOwner = pp; } }
+
+      const sg = $("stageAndGrid"), sw = $("stageWrapper"), sa = $("stageVideoArea");
+      if (isBotStage) {
+        sg.classList.add("has-stage"); sw.classList.remove("hidden"); $("stageTitle").textContent = "Тест экрана"; $("stagePresenterName").textContent = "· Zcall Бот"; $("stageClosePinBtn").classList.add("hidden"); sa.innerHTML = "";
+        const c = document.createElement("canvas"); c.ondblclick = toggleStageFullscreen; sa.appendChild(c); mountBotCanvasLoop(c, true);
+      } else if (stageTrack && stageOwner) {
+        sg.classList.add("has-stage"); sw.classList.remove("hidden"); $("stageTitle").textContent = isScreenOnStage ? "Демонстрация экрана" : "Закреплено"; $("stagePresenterName").textContent = `· ${displayNameOf(stageOwner)}`; $("stageClosePinBtn").classList.toggle("hidden", isScreenOnStage); sa.innerHTML = "";
+        const vEl = stageTrack.attach(); vEl.autoplay = true; vEl.playsInline = true; vEl.muted = stageOwner.identity === state.localIdentity; vEl.ondblclick = toggleStageFullscreen; sa.appendChild(vEl);
+      } else { sg.classList.remove("has-stage"); sw.classList.add("hidden"); sa.innerHTML = ""; }
+
+      const grid = $("videoGrid"); grid.innerHTML = "";
+      allReal.forEach((p) => {
+        const isLocal = p.identity === state.localIdentity, prof = state.profiles.get(p.identity) || {};
+        const name = isLocal ? (state.user?.nick || "Вы") : displayNameOf(p), hand = isLocal ? state.handRaised : !!prof.handRaised, filter = isLocal ? state.filter : prof.filter || "none";
+        const tile = document.createElement("div"); tile.className = "participant-tile"; tile.dataset.identity = p.identity;
+        if (p.isSpeaking) tile.classList.add("speaking");
+        const camPub = p.getTrackPublication(LK.Track.Source.Camera), micPub = p.getTrackPublication(LK.Track.Source.Microphone);
+        const hasVideo = camPub?.track && !camPub.isMuted, isMicMuted = isLocal ? !state.micEnabled : (!micPub || micPub.isMuted);
+        if (hasVideo) {
+          const v = camPub.track.attach(); v.autoplay = true; v.playsInline = true; v.muted = true;
+          if (isLocal && state.mirrorSelf) v.classList.add("mirrored");
+          if (filter !== "none") v.classList.add(`filter-${filter}`);
+          tile.appendChild(v);
+        } else { const av = document.createElement("div"); av.className = "avatar-circle"; av.textContent = (name[0] || "Z").toUpperCase(); tile.appendChild(av); }
+        if (hand) { const tb = document.createElement("div"); tb.className = "tile-top-badges"; const hb = document.createElement("span"); hb.className = "tile-pill hand-badge"; hb.textContent = "Рука поднята"; tb.appendChild(hb); tile.appendChild(tb); }
+        const bar = document.createElement("div"); bar.className = "tile-bottom-bar";
+        const nw = document.createElement("div"); nw.className = "tile-name-wrap";
+        const ms = document.createElement("span"); ms.innerHTML = isMicMuted ? SVG.micOff : SVG.micOn;
+        const ns = document.createElement("span"); ns.className = "tile-name"; ns.textContent = isLocal ? `${name} (Вы)` : name; nw.append(ms, ns);
+        const acts = document.createElement("div"); acts.className = "tile-actions";
+        if (!isLocal) { const sl = document.createElement("input"); sl.type = "range"; sl.min = "0"; sl.max = "100"; sl.value = String(state.volumes.get(p.identity) ?? 100); sl.className = "tile-vol-slider"; sl.oninput = (e) => setParticipantVolume(p.identity, Number(e.target.value)); acts.appendChild(sl); }
+        if (hasVideo) { const pb = document.createElement("button"); pb.className = "tile-mini-btn"; pb.innerHTML = SVG.pin; pb.onclick = () => { state.pinnedIdentity = state.pinnedIdentity === p.identity ? null : p.identity; renderAllTiles(); }; acts.appendChild(pb); }
+        bar.append(nw, acts); tile.appendChild(bar); grid.appendChild(tile);
+      });
+
+      if (state.botEnabled) {
+        const tile = document.createElement("div"); tile.className = "participant-tile"; tile.dataset.identity = "zcall-bot";
+        if (state.botSpeaking) tile.classList.add("speaking");
+        const canvas = document.createElement("canvas"); canvas.className = "bot-canvas"; tile.appendChild(canvas); mountBotCanvasLoop(canvas, false);
+        const bc = document.createElement("div"); bc.className = "bot-tile-controls";
+        const eb = document.createElement("button"); eb.className = "bot-action-chip"; eb.textContent = state.botEchoRecording ? "Запись 4с..." : "Эхо-тест 4с"; eb.onclick = runBotEchoTest;
+        const sb = document.createElement("button"); sb.className = "bot-action-chip"; sb.textContent = state.botScreenTest ? "Убрать экран" : "Тест экрана"; sb.onclick = () => { state.botScreenTest = !state.botScreenTest; renderAllTiles(); };
+        const cb = document.createElement("button"); cb.className = "bot-action-chip"; cb.textContent = "Тест чата"; cb.onclick = runBotChatTest;
+        bc.append(eb, sb, cb); tile.appendChild(bc);
+        const bar = document.createElement("div"); bar.className = "tile-bottom-bar";
+        bar.innerHTML = `<div class="tile-name-wrap">${SVG.micOn}<span class="tile-name">Zcall Тест-Бот</span></div><div class="tile-actions"></div>`;
+        const sl = document.createElement("input"); sl.type = "range"; sl.min = "0"; sl.max = "100"; sl.value = String(state.volumes.get("zcall-bot") ?? 100); sl.className = "tile-vol-slider"; sl.oninput = (e) => state.volumes.set("zcall-bot", Number(e.target.value));
+        bar.querySelector(".tile-actions").appendChild(sl); tile.appendChild(bar); grid.appendChild(tile);
+      }
+    }
+
+    function renderParticipantsTab(allReal) {
+      const list = $("participantsList"); if (!list) return; list.innerHTML = "";
+      const items = allReal.map((p) => {
+        const isLocal = p.identity === state.localIdentity, prof = state.profiles.get(p.identity) || {};
+        const mp = p.getTrackPublication(LK.Track.Source.Microphone), cp = p.getTrackPublication(LK.Track.Source.Camera);
+        return { name: isLocal ? `${state.user?.nick || "Вы"} (Вы)` : displayNameOf(p), sub: isLocal ? `@${state.user?.username || ""}` : (prof.username ? `@${prof.username}` : "В комнате"), micOn: isLocal ? (state.inCall && state.micEnabled) : !!(mp && !mp.isMuted), camOn: isLocal ? (state.inCall && state.camEnabled) : !!(cp && !cp.isMuted) };
+      });
+      if (state.botEnabled) items.push({ name: "Zcall Тест-Бот", sub: "Проверка", micOn: true, camOn: true });
+      items.forEach((it) => {
+        const row = document.createElement("div"); row.className = "p-list-item";
+        row.innerHTML = `<div class="p-list-left"><div class="p-mini-av">${(it.name[0] || "Z").toUpperCase()}</div><div><div class="p-list-name"></div><div class="p-list-role"></div></div></div><div class="p-list-right">${it.micOn ? SVG.micOn : SVG.micOff}${it.camOn ? SVG.camOn : SVG.camOff}</div>`;
+        row.querySelector(".p-list-name").textContent = it.name; row.querySelector(".p-list-role").textContent = it.sub; list.appendChild(row);
+      });
+    }
+
+    function toggleStageFullscreen() { const el = $("stageWrapper"); if (!document.fullscreenElement) el.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.().catch(() => {}); }
+    async function toggleStagePiP() { const vid = $("stageVideoArea").querySelector("video"); if (!vid || !document.pictureInPictureEnabled) { showToast("PiP доступен для видеопотока"); return; } try { if (document.pictureInPictureElement) await document.exitPictureInPicture(); else await vid.requestPictureInPicture(); } catch (_) {} }
+
+    function updateDockButtons() {
+      $("micBtn").className = `dock-btn ${state.micEnabled ? "active" : "off"}`; $("micBtnIcon").innerHTML = state.micEnabled ? SVG.micOn : SVG.micOff;
+      $("camBtn").className = `dock-btn ${state.camEnabled ? "active" : "off"}`; $("camBtnIcon").innerHTML = state.camEnabled ? SVG.camOn : SVG.camOff;
+      $("screenBtn").className = `dock-btn ${state.screenSharing ? "highlight" : ""}`;
+      $("handBtn").className = `dock-btn ${state.handRaised ? "highlight" : ""}`;
+      $("chatToggleBtn").className = `dock-btn ${state.chatOpen ? "highlight" : ""}`;
+      updateUserBarUI();
+    }
+
+    async function toggleMic() {
+      if (!state.inCall) { state.micEnabled = !state.micEnabled; updateDockButtons(); return; }
+      const next = !state.micEnabled;
+      try { await state.room.localParticipant.setMicrophoneEnabled(next, getAudioCaptureOpts()); state.micEnabled = next; updateDockButtons(); renderAllTiles(); }
+      catch { showToast("Нет доступа к микрофону"); }
+    }
+    async function toggleCam() {
+      if (!state.inCall) { state.camEnabled = !state.camEnabled; updateDockButtons(); return; }
+      const next = !state.camEnabled;
+      try { await state.room.localParticipant.setCameraEnabled(next, getVideoCaptureOpts()); state.camEnabled = next; updateDockButtons(); renderAllTiles(); }
+      catch { showToast("Нет доступа к камере"); }
+    }
+    async function toggleScreenShare() {
+      if (!state.inCall || !state.room) return;
+      if (!canScreenShare) { showToast("Этот браузер не разрешает отдавать свой экран."); return; }
+      const next = !state.screenSharing;
+      try {
+        const pd = getPublishDefaults();
+        await state.room.localParticipant.setScreenShareEnabled(next, getScreenCaptureOpts(), next ? { screenShareEncoding: pd.screenShareEncoding, degradationPreference: state.screenMode === "detail" ? "maintain-resolution" : "maintain-framerate", simulcast: true } : undefined);
+        state.screenSharing = next; updateDockButtons(); renderAllTiles();
+      } catch (e) { state.screenSharing = false; updateDockButtons(); if (e?.name !== "NotAllowedError") showToast("Не удалось показать экран"); }
+    }
+    function toggleHand() { state.handRaised = !state.handRaised; updateDockButtons(); broadcastProfile(); renderAllTiles(); }
+
+    function spawnFloatingReaction(emoji, senderName) {
+      const item = document.createElement("div"); item.className = "floating-reaction"; item.style.left = `${15 + Math.random() * 70}%`;
+      const em = document.createElement("span"); em.className = "emoji"; em.textContent = emoji;
+      const sn = document.createElement("span"); sn.className = "sender"; sn.textContent = senderName;
+      item.append(em, sn); $("reactionsOverlay").appendChild(item); setTimeout(() => item.remove(), 2700);
+    }
+
+    /* ЧАТ */
+    function toggleChat(forceState) {
+      if (!state.inCall) { $("chatDrawer").classList.remove("hidden"); return; }
+      state.chatOpen = typeof forceState === "boolean" ? forceState : !state.chatOpen;
+      $("chatDrawer").classList.toggle("hidden", !state.chatOpen);
+      if (state.chatOpen) { state.unreadCount = 0; $("chatBadge").classList.add("hidden"); $("chatMessages").scrollTop = $("chatMessages").scrollHeight; }
+      updateDockButtons();
+    }
+    function switchSidebarTab(tab) {
+      $("tabChatBtn").classList.toggle("active", tab === "chat"); $("tabParticipantsBtn").classList.toggle("active", tab === "participants");
+      $("chatTabPanel").classList.toggle("hidden", tab !== "chat"); $("participantsTabPanel").classList.toggle("hidden", tab !== "participants");
+    }
+    function appendChatMessage(msg) {
+      const rec = { ...msg, reactions: msg.reactions || {} }; state.messages.push(rec); renderSingleMessage(rec);
+      if (rec.senderIdentity !== state.localIdentity) {
+        playSfx("chat");
+        if (state.inCall && !state.chatOpen) { state.unreadCount++; $("chatBadge").textContent = String(state.unreadCount); $("chatBadge").classList.remove("hidden"); }
+      }
+      $("chatMessages").scrollTop = $("chatMessages").scrollHeight;
+    }
+    function renderTextWithLinks(container, text) {
+      text.split(/(https?:\/\/[^\s]+)/g).forEach((part) => {
+        if (/^https?:\/\/[^\s]+$/.test(part)) { const a = document.createElement("a"); a.href = part; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = part; container.appendChild(a); }
+        else container.appendChild(document.createTextNode(part));
+      });
+    }
+    function createVoicePlayerEl(url) {
+      const wrap = document.createElement("div"); wrap.className = "msg-voice-player"; const audio = new Audio(url);
+      const btn = document.createElement("button"); btn.className = "voice-play-btn"; btn.innerHTML = SVG.play;
+      const track = document.createElement("div"); track.className = "voice-track";
+      const bg = document.createElement("div"); bg.className = "voice-progress-bg";
+      const fill = document.createElement("div"); fill.className = "voice-progress-fill"; bg.appendChild(fill);
+      const dur = document.createElement("span"); dur.className = "voice-duration"; dur.textContent = "Голосовое";
+      track.append(bg, dur); wrap.append(btn, track);
+      audio.addEventListener("loadedmetadata", () => { if (isFinite(audio.duration)) dur.textContent = formatSec(audio.duration); });
+      audio.addEventListener("timeupdate", () => { if (isFinite(audio.duration) && audio.duration > 0) { fill.style.width = `${(audio.currentTime / audio.duration) * 100}%`; dur.textContent = formatSec(audio.currentTime); } });
+      audio.addEventListener("ended", () => { btn.innerHTML = SVG.play; fill.style.width = "0%"; });
+      btn.onclick = () => { if (audio.paused) { audio.play().catch(() => {}); btn.innerHTML = SVG.pause; } else { audio.pause(); btn.innerHTML = SVG.play; } };
+      return wrap;
+    }
+    function renderSingleMessage(msg) {
+      const isSelf = msg.senderIdentity === state.localIdentity;
+      const row = document.createElement("div"); row.className = `msg-row ${isSelf ? "self" : ""}`; row.dataset.msgId = msg.id;
+      const bubble = document.createElement("div"); bubble.className = "msg-bubble";
+      if (!isSelf) { const a = document.createElement("div"); a.className = "msg-author"; a.textContent = msg.senderName || "Участник"; bubble.appendChild(a); }
+      if (msg.replyTo) { const q = document.createElement("div"); q.className = "msg-quote"; const qa = document.createElement("strong"); qa.textContent = msg.replyTo.senderName; const qt = document.createElement("span"); qt.textContent = msg.replyTo.preview; q.append(qa, qt); bubble.appendChild(q); }
+      if (msg.voiceUrl) bubble.appendChild(createVoicePlayerEl(msg.voiceUrl));
+      if (msg.imageUrl) { const img = document.createElement("img"); img.className = "msg-image"; img.src = msg.imageUrl; img.onclick = () => openLightbox(msg.imageUrl, msg.fileName || "Изображение"); bubble.appendChild(img); }
+      if (msg.fileUrl) { const fc = document.createElement("div"); fc.className = "msg-file-card"; const meta = document.createElement("div"); const fn = document.createElement("span"); fn.className = "msg-file-name"; fn.textContent = msg.fileName || "Файл"; const fs = document.createElement("span"); fs.className = "msg-file-size"; fs.textContent = formatBytes(msg.fileSize); meta.append(fn, fs); const dl = document.createElement("a"); dl.className = "ghost-btn"; dl.href = msg.fileUrl; dl.download = msg.fileName || "file"; dl.innerHTML = SVG.download; fc.append(meta, dl); bubble.appendChild(fc); }
+      if (msg.text) { const txt = document.createElement("div"); txt.className = "msg-text"; renderTextWithLinks(txt, msg.text); bubble.appendChild(txt); }
+      const footer = document.createElement("div"); footer.className = "msg-footer"; const reactBox = document.createElement("div"); reactBox.className = "msg-reactions"; const timeEl = document.createElement("span"); timeEl.className = "msg-time"; timeEl.textContent = formatTime(msg.time);
+      if (isSelf) { const chk = document.createElement("span"); chk.innerHTML = SVG.checks; timeEl.appendChild(chk); }
+      footer.append(reactBox, timeEl); bubble.appendChild(footer);
+      const hb = document.createElement("div"); hb.className = "msg-hover-actions";
+      const rb = document.createElement("button"); rb.innerHTML = `${SVG.reply}<span>Ответить</span>`; rb.onclick = () => startReply(msg); hb.appendChild(rb);
+      if (msg.text) { const cb = document.createElement("button"); cb.innerHTML = `${SVG.copy}<span>Копировать</span>`; cb.onclick = () => navigator.clipboard?.writeText(msg.text).then(() => showToast("Скопировано")); hb.appendChild(cb); }
+      ["❤️", "👍", "🔥"].forEach((em) => { const b = document.createElement("button"); b.textContent = em; b.onclick = () => toggleChatReaction(msg.id, em); hb.appendChild(b); });
+      row.append(bubble, hb); $("chatMessages").appendChild(row);
+    }
+    function startReply(msg) { state.replyTo = { id: msg.id, senderName: msg.senderName, preview: msg.text || (msg.voiceUrl ? "Голосовое" : msg.imageUrl ? "Фото" : msg.fileName || "Файл") }; $("replyPreviewAuthor").textContent = `Ответ для ${msg.senderName}`; $("replyPreviewText").textContent = state.replyTo.preview; $("replyPreviewBar").classList.remove("hidden"); $("chatInput").focus(); }
+    function cancelReply() { state.replyTo = null; $("replyPreviewBar").classList.add("hidden"); }
+    function toggleChatReaction(msgId, emoji) { applyMessageReaction(msgId, emoji, state.localIdentity); sendData("zcall-chat-react", { msgId, emoji }); }
+    function applyMessageReaction(msgId, emoji, userId) {
+      const msg = state.messages.find((m) => m.id === msgId); if (!msg) return;
+      if (!msg.reactions[emoji]) msg.reactions[emoji] = new Set();
+      if (msg.reactions[emoji].has(userId)) { msg.reactions[emoji].delete(userId); if (!msg.reactions[emoji].size) delete msg.reactions[emoji]; } else msg.reactions[emoji].add(userId);
+      const row = $("chatMessages").querySelector(`.msg-row[data-msg-id="${CSS.escape(msgId)}"]`); if (!row) return;
+      const box = row.querySelector(".msg-reactions"); box.innerHTML = "";
+      Object.entries(msg.reactions).forEach(([em, users]) => { const chip = document.createElement("button"); chip.className = "msg-react-chip"; chip.textContent = `${em} ${users.size}`; chip.onclick = () => toggleChatReaction(msgId, em); box.appendChild(chip); });
+    }
+    async function sendChatText() {
+      const input = $("chatInput"), text = input.value.trim(); if (!text) return;
+      const msg = { id: uid(9), senderIdentity: state.localIdentity || "local", senderName: state.user?.nick || "Я", text, replyTo: state.replyTo ? { ...state.replyTo } : null, time: Date.now() };
+      input.value = ""; input.style.height = "auto"; cancelReply(); appendChatMessage(msg);
+      if (state.room) await sendData("zcall-chat", msg);
+      else showToast("Чат подключается — нажми на статус сверху, если не онлайн");
+      handleBotReplyToUser(msg);
+    }
+    async function sendFiles(fileList, forceVoice = false) {
+      if (!fileList?.length) return;
+      for (const file of fileList) {
+        if (file.size > 25 * 1024 * 1024) { showToast(`Файл ${file.name} больше 25 МБ`); continue; }
+        const url = URL.createObjectURL(file), isVoice = forceVoice || (file.name || "").startsWith("zcall-voice-"), isImg = !isVoice && (file.type || "").startsWith("image/");
+        appendChatMessage({ id: uid(9), senderIdentity: state.localIdentity || "local", senderName: state.user?.nick || "Я", voiceUrl: isVoice ? url : null, imageUrl: isImg ? url : null, fileUrl: !isImg && !isVoice ? url : null, fileName: file.name || "file", fileSize: file.size, time: Date.now() });
+        if (state.room) { try { await state.room.localParticipant.sendFile(file, { topic: "zcall-file", mimeType: file.type || "application/octet-stream" }); } catch { showToast(`Ошибка отправки ${file.name}`); } }
+      }
+    }
+    async function startVoiceRecord() {
+      if (state.voiceRecorder) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: state.audioDeviceId ? { deviceId: state.audioDeviceId } : true });
+        const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((m) => MediaRecorder.isTypeSupported?.(m)) || "";
+        const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        state.voiceChunks = []; state.voiceRecorder = { rec, stream, mime, send: false };
+        rec.ondataavailable = (e) => { if (e.data.size) state.voiceChunks.push(e.data); };
+        rec.onstop = () => {
+          const info = state.voiceRecorder; clearInterval(state.voiceTimerInt); info.stream.getTracks().forEach((t) => t.stop());
+          $("voiceRecordingBar").classList.add("hidden"); $("chatTextBar").classList.remove("hidden");
+          if (info.send && state.voiceChunks.length) {
+            const ext = (info.mime || "").includes("mp4") ? "m4a" : "webm";
+            sendFiles([new File([new Blob(state.voiceChunks, { type: info.mime || "audio/webm" })], `zcall-voice-${Date.now()}.${ext}`, { type: info.mime || "audio/webm" })], true);
+          }
+          state.voiceRecorder = null;
+        };
+        rec.start(); state.voiceStartedAt = Date.now(); $("voiceRecTimer").textContent = "00:00";
+        $("chatTextBar").classList.add("hidden"); $("voiceRecordingBar").classList.remove("hidden");
+        state.voiceTimerInt = setInterval(() => { $("voiceRecTimer").textContent = formatSec((Date.now() - state.voiceStartedAt) / 1000); }, 300);
+      } catch { showToast("Нет доступа к микрофону"); }
+    }
+    function finishVoiceRecord(send) { if (state.voiceRecorder) { state.voiceRecorder.send = send; if (state.voiceRecorder.rec.state !== "inactive") state.voiceRecorder.rec.stop(); } }
+    function showRemoteTyping(name) { $("typingIndicator").textContent = `${name} печатает...`; clearTimeout(state.typingTimer); state.typingTimer = setTimeout(() => { $("typingIndicator").textContent = "Чат комнаты · онлайн"; }, 2200); }
+    function openLightbox(url, cap) { $("lightboxImg").src = url; $("lightboxCaption").textContent = cap; $("lightboxDownload").href = url; $("lightboxDownload").download = cap; $("lightboxModal").classList.remove("hidden"); }
+
+    function startCallTimers() {
+      state.callStartedAt = Date.now(); clearInterval(state.timerInterval);
+      state.timerInterval = setInterval(() => { $("callTimer").textContent = formatSec((Date.now() - state.callStartedAt) / 1000); }, 1000);
+      clearInterval(state.statsInterval); state.statsInterval = setInterval(updateRoomStats, 3000);
+    }
+    function updateRoomStats() {
+      if (!state.room || $("settingsModal").classList.contains("hidden")) return;
+      const lp = state.room.localParticipant, lines = [`Комната: ${state.roomName}`, `Видео: ${state.quality === "4k" ? "4K" : state.quality + "p"}`, `Звук: ${state.audioPreset}`];
+      const cs = lp.getTrackPublication(LK.Track.Source.Camera)?.track?.mediaStreamTrack?.getSettings?.();
+      if (cs) lines.push(`Камера: ${cs.width || "?"}x${cs.height || "?"} @ ${Math.round(cs.frameRate || 0)} FPS`);
+      $("statsBox").textContent = lines.join("\n");
+    }
+    function syncRoomSettingsUI() {
+      $("roomQualitySelect").value = state.quality; $("roomAudioPresetSelect").value = state.audioPreset;
+      $("roomScreenModeSelect").value = state.screenMode; $("roomFilterSelect").value = state.filter;
+      $("roomThemeSelect").value = state.theme; $("cleanMicToggle").checked = state.cleanMic;
+      $("mirrorSelfToggle").checked = state.mirrorSelf; $("uiSoundsToggle").checked = state.uiSounds;
+    }
+    async function applyQualityMidCall() {
+      if (!state.inCall || !state.room) return;
+      if (state.camEnabled) { await state.room.localParticipant.setCameraEnabled(false); await state.room.localParticipant.setCameraEnabled(true, getVideoCaptureOpts()); }
+      if (state.micEnabled) { await state.room.localParticipant.setMicrophoneEnabled(false); await state.room.localParticipant.setMicrophoneEnabled(true, getAudioCaptureOpts()); }
+      renderAllTiles();
+    }
+
+    function init() {
+      applyTheme(state.theme);
+      const hashRoom = decodeURIComponent((window.location.hash || "").replace(/^#/, "")).trim();
+      const queryRoom = new URLSearchParams(window.location.search).get("room");
+      if (hashRoom || queryRoom) state.roomName = hashRoom || queryRoom;
+
+      $("authTabReg").onclick = () => showAuthTab("reg"); $("authTabLogin").onclick = () => showAuthTab("login");
+      $("regForm").onsubmit = handleRegister; $("loginForm").onsubmit = handleLogin; $("logoutAccountBtn").onclick = logoutAccount;
+      document.querySelectorAll("[data-set-theme]").forEach((b) => b.onclick = () => applyTheme(b.dataset.setTheme));
+      $("mobileMenuBtn").onclick = () => $("sidebarDrawer").classList.toggle("open");
+      $("sidebarCloseBtn").onclick = () => $("sidebarDrawer").classList.remove("open");
+
+      $("genRoomBtn").onclick = () => switchRoomFast(randomRoomName());
+      $("newRoomRailBtn").onclick = () => switchRoomFast(randomRoomName());
+      $("roomInput").onkeydown = (e) => { if (e.key === "Enter") switchRoomFast($("roomInput").value); };
+      $("copySidebarInviteBtn").onclick = () => copyInviteLink(state.roomName);
+      $("copyRoomLinkBtn").onclick = () => copyInviteLink(state.roomName);
+      $("connStatusPill").onclick = () => { if (!state.room && !state.isConnecting) connectRoomChatOnly(state.roomName); };
+
+      $("startCallTopBtn").onclick = () => startCall({ withBot: false });
+      $("endCallTopBtn").onclick = endCall;
+      $("navVoiceChannelBtn").onclick = () => { $("sidebarDrawer").classList.remove("open"); if (!state.inCall) startCall({ withBot: false }); };
+      $("navTextChannelBtn").onclick = () => { $("sidebarDrawer").classList.remove("open"); toggleChat(true); };
+      $("toggleBotBtn").onclick = () => { if (!state.inCall) startCall({ withBot: true }); else if (state.botEnabled) stopBotEngine(); else startBotEngine(true); };
+      $("botRailBtn").onclick = $("toggleBotBtn").onclick;
+
+      $("unlockAudioBtn").onclick = async () => { if (state.room) { await state.room.startAudio(); $("audioUnlockBanner").classList.add("hidden"); } };
+      $("micBtn").onclick = toggleMic; $("userPanelMicBtn").onclick = toggleMic;
+      $("camBtn").onclick = toggleCam; $("userPanelCamBtn").onclick = toggleCam;
+      $("screenBtn").onclick = toggleScreenShare; $("handBtn").onclick = toggleHand; $("leaveBtn").onclick = endCall;
+      $("chatToggleBtn").onclick = () => toggleChat(); $("closeChatBtn").onclick = () => toggleChat(false);
+      $("tabChatBtn").onclick = () => switchSidebarTab("chat"); $("tabParticipantsBtn").onclick = () => switchSidebarTab("participants");
+      $("stageFullscreenBtn").onclick = toggleStageFullscreen; $("stagePipBtn").onclick = toggleStagePiP;
+      $("stageClosePinBtn").onclick = () => { state.pinnedIdentity = null; renderAllTiles(); };
+
+      $("reactBtn").onclick = (e) => { e.stopPropagation(); $("reactionsPicker").classList.toggle("hidden"); };
+      $("reactionsPicker").querySelectorAll("button").forEach((b) => { b.onclick = () => { const em = b.dataset.emoji; $("reactionsPicker").classList.add("hidden"); spawnFloatingReaction(em, state.user?.nick || "Я"); sendData("zcall-reaction", { emoji: em, name: state.user?.nick || "Я" }); }; });
+      $("emojiToggleBtn").onclick = (e) => { e.stopPropagation(); $("emojiPopover").classList.toggle("hidden"); };
+      $("emojiPopover").querySelectorAll("button").forEach((b) => { b.onclick = () => { $("chatInput").value += b.dataset.ins; $("emojiPopover").classList.add("hidden"); $("chatInput").focus(); }; });
+      document.addEventListener("click", () => { $("reactionsPicker").classList.add("hidden"); $("emojiPopover").classList.add("hidden"); });
+
+      const openSettings = () => { loadDevices(); syncRoomSettingsUI(); renderAccountsRegistry(); $("settingsModal").classList.remove("hidden"); updateRoomStats(); };
+      $("topSettingsBtn").onclick = openSettings; $("userPanelSettingsBtn").onclick = openSettings;
+      $("closeSettingsBtn").onclick = () => $("settingsModal").classList.add("hidden");
+      $("settingsModal").onclick = (e) => { if (e.target === $("settingsModal")) $("settingsModal").classList.add("hidden"); };
+      $("clearAccountsBtn").onclick = () => { localStorage.removeItem(ACCOUNTS_KEY); renderAccountsRegistry(); showToast("База аккаунтов очищена"); };
+
+      $("lobbyQualitySelect").onchange = (e) => { state.quality = e.target.value; localStorage.setItem("zcall_quality", state.quality); applyQualityMidCall(); };
+      $("lobbyAudioPresetSelect").onchange = (e) => { state.audioPreset = e.target.value; localStorage.setItem("zcall_audio_preset", state.audioPreset); applyQualityMidCall(); };
+      $("roomAudioSelect").onchange = async (e) => { state.audioDeviceId = e.target.value; await state.room?.switchActiveDevice("audioinput", state.audioDeviceId); };
+      $("roomVideoSelect").onchange = async (e) => { state.videoDeviceId = e.target.value; await state.room?.switchActiveDevice("videoinput", state.videoDeviceId); };
+      $("roomQualitySelect").onchange = (e) => { state.quality = e.target.value; localStorage.setItem("zcall_quality", state.quality); applyQualityMidCall(); };
+      $("roomAudioPresetSelect").onchange = (e) => { state.audioPreset = e.target.value; localStorage.setItem("zcall_audio_preset", state.audioPreset); applyQualityMidCall(); };
+      $("roomScreenModeSelect").onchange = (e) => { state.screenMode = e.target.value; localStorage.setItem("zcall_screen_mode", state.screenMode); };
+      $("roomFilterSelect").onchange = (e) => { state.filter = e.target.value; localStorage.setItem("zcall_filter", state.filter); broadcastProfile(); renderAllTiles(); };
+      $("roomThemeSelect").onchange = (e) => applyTheme(e.target.value);
+      $("cleanMicToggle").onchange = (e) => { state.cleanMic = e.target.checked; localStorage.setItem("zcall_clean_mic", String(state.cleanMic)); applyQualityMidCall(); };
+      $("mirrorSelfToggle").onchange = (e) => { state.mirrorSelf = e.target.checked; localStorage.setItem("zcall_mirror", String(state.mirrorSelf)); renderAllTiles(); };
+      $("uiSoundsToggle").onchange = (e) => { state.uiSounds = e.target.checked; localStorage.setItem("zcall_sounds", String(state.uiSounds)); };
+      $("saveSandboxBtn").onclick = () => { const v = $("sandboxIdInput").value.trim() || DEFAULT_SANDBOX_ID; state.sandboxId = v; localStorage.setItem("zcall_sandbox_id", v); showToast("Sandbox ID сохранён"); };
+
+      $("sendChatBtn").onclick = sendChatText;
+      $("chatInput").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatText(); } };
+      $("chatInput").oninput = (e) => {
+        e.target.style.height = "auto"; e.target.style.height = `${Math.min(e.target.scrollHeight, 110)}px`;
+        const now = Date.now(); if (now - state.lastTypingSent > 1800) { state.lastTypingSent = now; sendData("zcall-typing", { name: state.user?.nick || "Кто-то" }, false); }
+      };
+      $("attachFileBtn").onclick = () => $("chatFileInput").click();
+      $("chatFileInput").onchange = (e) => { sendFiles(e.target.files); e.target.value = ""; };
+      $("voiceRecBtn").onclick = startVoiceRecord; $("voiceCancelBtn").onclick = () => finishVoiceRecord(false); $("voiceSendBtn").onclick = () => finishVoiceRecord(true);
+
+      $("chatInput").addEventListener("paste", (e) => {
+        const files = []; for (const item of e.clipboardData?.items || []) if (item.kind === "file") { const f = item.getAsFile(); if (f) files.push(f); }
+        if (files.length) { e.preventDefault(); sendFiles(files); }
+      });
+      const drawer = $("chatDrawer");
+      drawer.addEventListener("dragover", (e) => { e.preventDefault(); $("chatDropOverlay").classList.remove("hidden"); });
+      drawer.addEventListener("dragleave", () => $("chatDropOverlay").classList.add("hidden"));
+      drawer.addEventListener("drop", (e) => { e.preventDefault(); $("chatDropOverlay").classList.add("hidden"); if (e.dataTransfer?.files?.length) sendFiles(e.dataTransfer.files); });
+      $("cancelReplyBtn").onclick = cancelReply;
+      $("closeLightboxBtn").onclick = () => $("lightboxModal").classList.add("hidden");
+      $("lightboxModal").onclick = (e) => { if (e.target === $("lightboxModal")) $("lightboxModal").classList.add("hidden"); };
+
+      try { const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); if (saved?.username) { state.user = saved; enterAppShell(); } } catch (_) {}
+    }
+    window.addEventListener("DOMContentLoaded", init);
+  })();
+  </script>
 </body>
 </html>
