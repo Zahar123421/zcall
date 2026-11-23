@@ -12,42 +12,102 @@
 </head>
 <body data-theme="indigo">
 
-  <div class="discord-shell">
-    <!-- 1. ЛЕВАЯ РЕЛЬСА КОМНАТ (КАК СЕРВЕРЫ В DISCORD) -->
+  <!-- ==================== 1. ЭКРАН РЕГИСТРАЦИИ / ВХОДА ==================== -->
+  <section id="authView" class="auth-view">
+    <div class="auth-glow"></div>
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-logo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div>
+          <h1>Zcall</h1>
+          <p>Войди или зарегистрируйся, чтобы открыть чат и начать звонок</p>
+        </div>
+      </div>
+
+      <div class="auth-tabs">
+        <button id="authTabReg" class="auth-tab active" type="button">Зарегистрироваться</button>
+        <button id="authTabLogin" class="auth-tab" type="button">Войти</button>
+      </div>
+
+      <!-- Форма регистрации -->
+      <form id="regForm" class="auth-form" autocomplete="off">
+        <div class="two-cols">
+          <div class="field-group">
+            <label for="regUsername">Юз (уникальный)</label>
+            <input id="regUsername" type="text" maxlength="24" placeholder="Например: zakhar123" required />
+          </div>
+          <div class="field-group">
+            <label for="regNick">Ник (можно одинаковый)</label>
+            <input id="regNick" type="text" maxlength="24" placeholder="Например: Захар" required />
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="regEmail">Почта (уникальная)</label>
+          <input id="regEmail" type="text" maxlength="64" placeholder="pochta@mail.ru или код" required />
+        </div>
+        <div class="field-group">
+          <label for="regPassword">Пароль (можно одинаковый)</label>
+          <input id="regPassword" type="password" maxlength="64" placeholder="Придумай пароль" required />
+        </div>
+        <p id="regError" class="auth-error"></p>
+        <button id="regSubmitBtn" class="auth-submit-btn" type="submit">Зарегистрироваться и открыть чат</button>
+      </form>
+
+      <!-- Форма входа -->
+      <form id="loginForm" class="auth-form hidden" autocomplete="off">
+        <div class="field-group">
+          <label for="loginIdentifier">Юз или Почта</label>
+          <input id="loginIdentifier" type="text" maxlength="64" placeholder="Введи юз или почту" required />
+        </div>
+        <div class="field-group">
+          <label for="loginPassword">Пароль</label>
+          <input id="loginPassword" type="password" maxlength="64" placeholder="Введи пароль" required />
+        </div>
+        <p id="loginError" class="auth-error"></p>
+        <button id="loginSubmitBtn" class="auth-submit-btn" type="submit">Войти в чат</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ==================== 2. ОСНОВНОЙ DISCORD-ИНТЕРФЕЙС (ПОСЛЕ РЕГИСТРАЦИИ) ==================== -->
+  <div id="appShell" class="discord-shell hidden">
+    <!-- Левая рельса комнат -->
     <nav class="server-rail" aria-label="Комнаты">
-      <button id="homeRailBtn" class="rail-item brand-rail active" title="Zcall — Главная">
+      <button id="homeRailBtn" class="rail-item brand-rail active" title="Zcall">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
       </button>
       <div class="rail-divider"></div>
       <div id="serverRoomsRail" class="rail-rooms"></div>
-      <button id="newRoomRailBtn" class="rail-item add-rail" title="Создать новую комнату">
+      <button id="newRoomRailBtn" class="rail-item add-rail" title="Новая комната">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
       </button>
 
       <div class="rail-bottom">
-        <button id="botRailBtn" class="rail-item" title="Быстрая проверка с тест-ботом">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" x2="8" y1="16" y2="16"/><line x1="16" x2="16" y1="16" y2="16"/></svg>
+        <button id="botRailBtn" class="rail-item" title="Проверка звонка с ботом">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>
         </button>
-        <div class="theme-rail-dots" title="Цвет темы">
+        <div class="theme-rail-dots" title="Цвет акцента">
           <button class="theme-dot active" data-set-theme="indigo" style="--dot:#5865f2"></button>
           <button class="theme-dot" data-set-theme="blue" style="--dot:#2d8cff"></button>
           <button class="theme-dot" data-set-theme="teal" style="--dot:#00c2cb"></button>
-          <button class="theme-dot" data-set-theme="emerald" style="--dot:#22c55e"></button>
+          <button class="theme-dot" data-set-theme="emerald" style="--dot:#23a55a"></button>
         </div>
       </div>
     </nav>
 
-    <!-- 2. БОКОВАЯ ПАНЕЛЬ КАНАЛОВ И ПРОФИЛЯ (КАК В DISCORD) -->
+    <!-- Панель каналов и профиля -->
     <aside id="sidebarDrawer" class="channel-sidebar">
       <div class="channel-header">
         <div class="channel-server-title">
           <span id="sidebarRoomName">zcall-room</span>
         </div>
         <div class="channel-header-btns">
-          <button id="copySidebarInviteBtn" class="mini-icon-btn" title="Скопировать ссылку-приглашение">
+          <button id="copySidebarInviteBtn" class="mini-icon-btn" title="Пригласить по ссылке">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           </button>
-          <button id="sidebarCloseBtn" class="mini-icon-btn show-mobile" title="Закрыть меню">
+          <button id="sidebarCloseBtn" class="mini-icon-btn show-mobile" title="Закрыть">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </button>
         </div>
@@ -62,29 +122,25 @@
 
         <div class="channel-cat">ГОЛОСОВЫЕ КАНАЛЫ</div>
         <button id="navVoiceChannelBtn" class="channel-row">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-          <span>Голосовая комната</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          <span>Начать звонок</span>
           <span id="sidebarVoiceBadge" class="voice-count-pill">0</span>
         </button>
         <div id="sidebarVoiceMembers" class="voice-members-tree"></div>
 
-        <div class="channel-cat">ПАРАМЕТРЫ КОМНАТЫ</div>
+        <div class="channel-cat">КОМНАТА И КАЧЕСТВО</div>
         <div class="sidebar-quick-form">
-          <div class="field-group">
-            <label for="nickInput">Твоё имя</label>
-            <input id="nickInput" type="text" maxlength="24" placeholder="Например: Захар" autocomplete="nickname" />
-          </div>
           <div class="field-group">
             <label for="roomInput">Код комнаты</label>
             <div class="input-with-actions">
-              <input id="roomInput" type="text" maxlength="48" placeholder="zcall-room" />
-              <button id="genRoomBtn" class="icon-square-btn" title="Новая комната">
+              <input id="roomInput" type="text" maxlength="48" />
+              <button id="genRoomBtn" class="icon-square-btn" title="Сменить / Новая комната">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" x2="21" y1="20" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" x2="21" y1="15" y2="21"/><line x1="4" x2="9" y1="4" y2="9"/></svg>
               </button>
             </div>
           </div>
           <div class="field-group">
-            <label for="lobbyQualitySelect">Видео и демонстрация</label>
+            <label for="lobbyQualitySelect">Качество видео и экрана</label>
             <select id="lobbyQualitySelect">
               <option value="720">720p · 30 FPS</option>
               <option value="1080" selected>1080p HQ · 60 FPS</option>
@@ -102,29 +158,32 @@
         </div>
       </div>
 
-      <!-- НИЖНЯЯ ПЛАШКА ПРОФИЛЯ КАК В DISCORD -->
+      <!-- Нижняя плашка пользователя как в Discord -->
       <div class="discord-user-bar">
         <div class="user-bar-info">
           <div class="user-bar-avatar-wrap">
-            <div id="userPanelAvatar" class="user-bar-avatar">Г</div>
+            <div id="userPanelAvatar" class="user-bar-avatar">Z</div>
             <span class="user-status-dot"></span>
           </div>
           <div class="user-bar-meta">
-            <span id="userPanelName" class="user-bar-name">Гость</span>
-            <span id="userPanelStatus" class="user-bar-status">В сети</span>
+            <span id="userPanelName" class="user-bar-name">Ник</span>
+            <span id="userPanelHandle" class="user-bar-status">@юз</span>
           </div>
         </div>
         <div class="user-bar-controls">
-          <button id="userPanelMicBtn" class="mini-icon-btn active" title="Микрофон"></button>
-          <button id="userPanelCamBtn" class="mini-icon-btn active" title="Камера"></button>
-          <button id="userPanelSettingsBtn" class="mini-icon-btn" title="Настройки устройств">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <button id="userPanelMicBtn" class="mini-icon-btn" title="Микрофон"></button>
+          <button id="userPanelCamBtn" class="mini-icon-btn" title="Камера"></button>
+          <button id="userPanelSettingsBtn" class="mini-icon-btn" title="Настройки">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+          <button id="logoutAccountBtn" class="mini-icon-btn" title="Выйти из аккаунта">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
           </button>
         </div>
       </div>
     </aside>
 
-    <!-- 3. ЦЕНТРАЛЬНАЯ ОБЛАСТЬ (ЛОББИ ИЛИ АКТИВНАЯ КОМНАТА) -->
+    <!-- Центральная рабочая часть -->
     <div class="main-column">
       <header class="room-topbar">
         <div class="topbar-left">
@@ -134,6 +193,10 @@
           <span class="topbar-channel-title">
             <span class="channel-hash">#</span>
             <span id="roomTitleBadge">общий-чат</span>
+          </span>
+          <span id="connStatusPill" class="net-pill">
+            <span class="status-dot warn"></span>
+            <span>Подключение...</span>
           </span>
           <button id="copyRoomLinkBtn" class="room-pill-btn">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -147,262 +210,210 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
             <span id="participantCountNum">1</span>
           </span>
-          <span id="localNetQuality" class="net-pill">
-            <span class="status-dot good"></span>
-            <span>Стабильно</span>
-          </span>
         </div>
 
         <div class="topbar-right">
-          <button id="toggleBotBtn" class="topbar-icon-btn hidden" title="Включить/убрать тест-бота">
+          <button id="startCallTopBtn" class="start-call-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <span>Начать звонок</span>
+          </button>
+          <button id="endCallTopBtn" class="end-call-btn hidden">
+            <span>Завершить звонок</span>
+          </button>
+          <button id="toggleBotBtn" class="topbar-icon-btn" title="Проверка звонка с ботом">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>
-            <span class="hide-mobile">Бот</span>
+            <span class="hide-mobile">Тест-бот</span>
           </button>
           <button id="topSettingsBtn" class="topbar-icon-btn" title="Настройки">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            <span class="hide-mobile">Настройки</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
       </header>
 
-      <!-- ЭКРАН ДО ПОДКЛЮЧЕНИЯ (ВНУТРИ DISCORD-КОМПОНОВКИ) -->
-      <section id="lobbyView" class="lobby-stage-center">
-        <div class="lobby-hero-card">
-          <div class="preview-stage">
-            <video id="previewVideo" autoplay muted playsinline class="mirrored"></video>
-            <div id="previewPlaceholder" class="preview-placeholder">
-              <div id="previewAvatar" class="avatar-circle large">Г</div>
-              <span>Камера выключена</span>
+      <div id="audioUnlockBanner" class="alert-banner hidden">
+        <span>Браузер поставил звук собеседников на паузу.</span>
+        <button id="unlockAudioBtn" class="alert-action-btn">Включить звук</button>
+      </div>
+
+      <div id="reconnectBanner" class="alert-banner warn hidden">
+        <span>Переподключение к комнате...</span>
+      </div>
+
+      <!-- Сцена звонка + Чат -->
+      <main id="mainWorkspace" class="main-workspace chat-fullscreen">
+        <div id="stageAndGrid" class="stage-and-grid hidden">
+          <div id="stageWrapper" class="stage-wrapper hidden">
+            <div class="stage-header">
+              <div class="stage-label">
+                <span class="live-dot"></span>
+                <span id="stageTitle">Демонстрация экрана</span>
+                <span id="stagePresenterName" class="stage-presenter"></span>
+              </div>
+              <div class="stage-actions">
+                <button id="stagePipBtn" class="stage-btn">PiP</button>
+                <button id="stageFullscreenBtn" class="stage-btn">Полный экран</button>
+                <button id="stageClosePinBtn" class="stage-btn hidden">Сетка</button>
+              </div>
             </div>
-            <div class="preview-controls">
-              <button id="previewMicBtn" class="circle-btn active" title="Микрофон"></button>
-              <button id="previewCamBtn" class="circle-btn active" title="Камера"></button>
-            </div>
+            <div id="stageVideoArea" class="stage-video-area"></div>
           </div>
 
-          <div class="lobby-controls-below">
-            <div class="mic-meter-row">
-              <span class="mic-meter-label">Проверка микрофона</span>
-              <div class="mic-meter-track"><div id="micMeterFill" class="mic-meter-fill"></div></div>
-            </div>
-
-            <div class="two-cols">
-              <div class="field-group">
-                <label for="lobbyAudioSelect">Микрофон</label>
-                <select id="lobbyAudioSelect"></select>
-              </div>
-              <div class="field-group">
-                <label for="lobbyVideoSelect">Камера</label>
-                <select id="lobbyVideoSelect"></select>
-              </div>
-            </div>
-
-            <div class="lobby-btns-row">
-              <button id="joinBtn" class="primary-join-btn">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-                <span>Подключиться к голосу и чату</span>
-              </button>
-              <button id="joinChatOnlyBtn" class="secondary-join-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <span>Только чат</span>
-              </button>
-              <button id="joinBotBtn" class="secondary-join-btn bot-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>
-                <span>Проверка с ботом</span>
-              </button>
-            </div>
-
-            <p id="lobbyStatus" class="lobby-status"></p>
-          </div>
-        </div>
-      </section>
-
-      <!-- АКТИВНАЯ КОМНАТА -->
-      <section id="roomView" class="room-view hidden">
-        <div id="audioUnlockBanner" class="alert-banner hidden">
-          <span>Браузер поставил звук собеседников на паузу.</span>
-          <button id="unlockAudioBtn" class="alert-action-btn">Включить звук</button>
+          <div id="videoGrid" class="video-grid"></div>
         </div>
 
-        <div id="reconnectBanner" class="alert-banner warn hidden">
-          <span>Переподключение к комнате...</span>
-        </div>
-
-        <main id="mainWorkspace" class="main-workspace">
-          <div id="stageAndGrid" class="stage-and-grid">
-            <div id="stageWrapper" class="stage-wrapper hidden">
-              <div class="stage-header">
-                <div class="stage-label">
-                  <span class="live-dot"></span>
-                  <span id="stageTitle">Демонстрация экрана</span>
-                  <span id="stagePresenterName" class="stage-presenter"></span>
-                </div>
-                <div class="stage-actions">
-                  <button id="stagePipBtn" class="stage-btn">PiP</button>
-                  <button id="stageFullscreenBtn" class="stage-btn">Полный экран</button>
-                  <button id="stageClosePinBtn" class="stage-btn hidden">Сетка</button>
-                </div>
-              </div>
-              <div id="stageVideoArea" class="stage-video-area"></div>
+        <!-- Чат (открыт сразу после регистрации!) -->
+        <aside id="chatDrawer" class="chat-drawer">
+          <div class="sidebar-top">
+            <div class="sidebar-tabs">
+              <button id="tabChatBtn" class="sidebar-tab active">Чат</button>
+              <button id="tabParticipantsBtn" class="sidebar-tab">Участники (<span id="tabParticipantsCount">1</span>)</button>
             </div>
-
-            <div id="videoGrid" class="video-grid"></div>
+            <button id="closeChatBtn" class="icon-close-btn hidden" title="Скрыть чат">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
           </div>
 
-          <!-- ЧАТ И СПИСОК ЛЮДЕЙ -->
-          <aside id="chatDrawer" class="chat-drawer hidden">
-            <div class="sidebar-top">
-              <div class="sidebar-tabs">
-                <button id="tabChatBtn" class="sidebar-tab active">Чат</button>
-                <button id="tabParticipantsBtn" class="sidebar-tab">Участники (<span id="tabParticipantsCount">1</span>)</button>
+          <div id="chatTabPanel" class="tab-panel">
+            <div class="chat-status-strip">
+              <span id="typingIndicator" class="chat-substatus">Чат комнаты готов</span>
+            </div>
+
+            <div id="chatMessages" class="chat-messages">
+              <div class="chat-system-msg">
+                Добро пожаловать в Zcall! Нажмите «Начать звонок» сверху, чтобы говорить с видео и звуком, или общайтесь прямо здесь.
               </div>
-              <button id="closeChatBtn" class="icon-close-btn" title="Скрыть чат">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </div>
+
+            <div id="replyPreviewBar" class="reply-preview-bar hidden">
+              <div class="reply-preview-content">
+                <span id="replyPreviewAuthor" class="reply-author"></span>
+                <span id="replyPreviewText" class="reply-text"></span>
+              </div>
+              <button id="cancelReplyBtn" class="reply-cancel-btn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
             </div>
 
-            <div id="chatTabPanel" class="tab-panel">
-              <div class="chat-status-strip">
-                <span id="typingIndicator" class="chat-substatus">Чат комнаты · онлайн</span>
+            <div class="chat-input-wrap">
+              <div id="emojiPopover" class="emoji-popover hidden">
+                <button type="button" data-ins="😀">😀</button>
+                <button type="button" data-ins="😂">😂</button>
+                <button type="button" data-ins="🔥">🔥</button>
+                <button type="button" data-ins="❤️">❤️</button>
+                <button type="button" data-ins="👍">👍</button>
+                <button type="button" data-ins="👏">👏</button>
+                <button type="button" data-ins="😎">😎</button>
+                <button type="button" data-ins="🎉">🎉</button>
+                <button type="button" data-ins="🤔">🤔</button>
+                <button type="button" data-ins="😭">😭</button>
+                <button type="button" data-ins="💯">💯</button>
+                <button type="button" data-ins="⚡">⚡</button>
               </div>
 
-              <div id="chatMessages" class="chat-messages">
-                <div class="chat-system-msg">
-                  Пишите сообщения, вставляйте скриншоты (Ctrl+V), отправляйте файлы и голосовые.
+              <div id="voiceRecordingBar" class="voice-rec-bar hidden">
+                <div class="voice-rec-info">
+                  <span class="rec-dot"></span>
+                  <span>Запись голосового</span>
+                  <span id="voiceRecTimer" class="voice-rec-time">00:00</span>
                 </div>
-              </div>
-
-              <div id="replyPreviewBar" class="reply-preview-bar hidden">
-                <div class="reply-preview-content">
-                  <span id="replyPreviewAuthor" class="reply-author"></span>
-                  <span id="replyPreviewText" class="reply-text"></span>
-                </div>
-                <button id="cancelReplyBtn" class="reply-cancel-btn">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                </button>
-              </div>
-
-              <div class="chat-input-wrap">
-                <div id="emojiPopover" class="emoji-popover hidden">
-                  <button type="button" data-ins="😀">😀</button>
-                  <button type="button" data-ins="😂">😂</button>
-                  <button type="button" data-ins="🔥">🔥</button>
-                  <button type="button" data-ins="❤️">❤️</button>
-                  <button type="button" data-ins="👍">👍</button>
-                  <button type="button" data-ins="👏">👏</button>
-                  <button type="button" data-ins="😎">😎</button>
-                  <button type="button" data-ins="🎉">🎉</button>
-                  <button type="button" data-ins="🤔">🤔</button>
-                  <button type="button" data-ins="😭">😭</button>
-                  <button type="button" data-ins="💯">💯</button>
-                  <button type="button" data-ins="⚡">⚡</button>
-                </div>
-
-                <div id="voiceRecordingBar" class="voice-rec-bar hidden">
-                  <div class="voice-rec-info">
-                    <span class="rec-dot"></span>
-                    <span>Запись голосового</span>
-                    <span id="voiceRecTimer" class="voice-rec-time">00:00</span>
-                  </div>
-                  <div class="voice-rec-actions">
-                    <button id="voiceCancelBtn" class="ghost-btn small">Отмена</button>
-                    <button id="voiceSendBtn" class="chat-send-btn" title="Отправить">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-                    </button>
-                  </div>
-                </div>
-
-                <div id="chatTextBar" class="chat-input-bar">
-                  <input id="chatFileInput" type="file" hidden multiple />
-                  <button id="attachFileBtn" class="chat-tool-btn" title="Прикрепить файл">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                  </button>
-                  <button id="emojiToggleBtn" class="chat-tool-btn" title="Эмодзи">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
-                  </button>
-                  <textarea id="chatInput" rows="1" placeholder="Написать в #общий-чат..."></textarea>
-                  <button id="voiceRecBtn" class="chat-tool-btn" title="Голосовое сообщение">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-                  </button>
-                  <button id="sendChatBtn" class="chat-send-btn" title="Отправить">
+                <div class="voice-rec-actions">
+                  <button id="voiceCancelBtn" class="ghost-btn">Отмена</button>
+                  <button id="voiceSendBtn" class="chat-send-btn" title="Отправить">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                   </button>
                 </div>
               </div>
 
-              <div id="chatDropOverlay" class="chat-drop-overlay hidden">
-                <span>Отпустите файл для отправки</span>
+              <div id="chatTextBar" class="chat-input-bar">
+                <input id="chatFileInput" type="file" hidden multiple />
+                <button id="attachFileBtn" class="chat-tool-btn" title="Прикрепить файл">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <button id="emojiToggleBtn" class="chat-tool-btn" title="Эмодзи">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+                </button>
+                <textarea id="chatInput" rows="1" placeholder="Написать в #общий-чат..."></textarea>
+                <button id="voiceRecBtn" class="chat-tool-btn" title="Голосовое сообщение">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                </button>
+                <button id="sendChatBtn" class="chat-send-btn" title="Отправить">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                </button>
               </div>
             </div>
 
-            <div id="participantsTabPanel" class="tab-panel hidden">
-              <div id="participantsList" class="participants-list"></div>
+            <div id="chatDropOverlay" class="chat-drop-overlay hidden">
+              <span>Отпустите файл для отправки</span>
             </div>
-          </aside>
-        </main>
-
-        <div id="reactionsOverlay" class="reactions-overlay"></div>
-
-        <footer class="control-dock">
-          <div class="dock-group">
-            <button id="micBtn" class="dock-btn active" title="Микрофон (M)">
-              <span class="dock-icon" id="micBtnIcon"></span>
-              <span class="dock-label">Микрофон</span>
-            </button>
-            <button id="camBtn" class="dock-btn active" title="Камера (V)">
-              <span class="dock-icon" id="camBtnIcon"></span>
-              <span class="dock-label">Камера</span>
-            </button>
-            <button id="screenBtn" class="dock-btn" title="Показать экран 1080p HQ">
-              <span class="dock-icon">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
-              </span>
-              <span class="dock-label">Экран</span>
-            </button>
-            <button id="handBtn" class="dock-btn" title="Поднять руку">
-              <span class="dock-icon">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
-              </span>
-              <span class="dock-label">Рука</span>
-            </button>
-            <div class="react-anchor">
-              <button id="reactBtn" class="dock-btn" title="Реакции">
-                <span class="dock-icon">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
-                </span>
-                <span class="dock-label">Реакция</span>
-              </button>
-              <div id="reactionsPicker" class="reactions-picker hidden">
-                <button data-emoji="❤️">❤️</button>
-                <button data-emoji="🔥">🔥</button>
-                <button data-emoji="😂">😂</button>
-                <button data-emoji="👏">👏</button>
-                <button data-emoji="👍">👍</button>
-                <button data-emoji="🤯">🤯</button>
-              </div>
-            </div>
-            <button id="chatToggleBtn" class="dock-btn" title="Чат (C)">
-              <span class="dock-icon">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              </span>
-              <span class="dock-label">Чат</span>
-              <span id="chatBadge" class="badge-counter hidden">0</span>
-            </button>
           </div>
-          <button id="leaveBtn" class="dock-btn danger" title="Отключиться">
-            <span class="dock-icon">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="22" x2="2" y1="2" y2="22"/></svg>
-            </span>
-            <span class="dock-label">Выйти</span>
+
+          <div id="participantsTabPanel" class="tab-panel hidden">
+            <div id="participantsList" class="participants-list"></div>
+          </div>
+        </aside>
+      </main>
+
+      <div id="reactionsOverlay" class="reactions-overlay"></div>
+
+      <footer id="callDockBar" class="control-dock hidden">
+        <div class="dock-group">
+          <button id="micBtn" class="dock-btn active" title="Микрофон (M)">
+            <span class="dock-icon" id="micBtnIcon"></span>
+            <span class="dock-label">Микрофон</span>
           </button>
-        </footer>
-      </section>
+          <button id="camBtn" class="dock-btn active" title="Камера (V)">
+            <span class="dock-icon" id="camBtnIcon"></span>
+            <span class="dock-label">Камера</span>
+          </button>
+          <button id="screenBtn" class="dock-btn" title="Показать экран 1080p HQ">
+            <span class="dock-icon">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            </span>
+            <span class="dock-label">Экран</span>
+          </button>
+          <button id="handBtn" class="dock-btn" title="Поднять руку">
+            <span class="dock-icon">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+            </span>
+            <span class="dock-label">Рука</span>
+          </button>
+          <div class="react-anchor">
+            <button id="reactBtn" class="dock-btn" title="Реакции">
+              <span class="dock-icon">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+              </span>
+              <span class="dock-label">Реакция</span>
+            </button>
+            <div id="reactionsPicker" class="reactions-picker hidden">
+              <button data-emoji="❤️">❤️</button>
+              <button data-emoji="🔥">🔥</button>
+              <button data-emoji="😂">😂</button>
+              <button data-emoji="👏">👏</button>
+              <button data-emoji="👍">👍</button>
+              <button data-emoji="🤯">🤯</button>
+            </div>
+          </div>
+          <button id="chatToggleBtn" class="dock-btn highlight" title="Чат (C)">
+            <span class="dock-icon">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </span>
+            <span class="dock-label">Чат</span>
+            <span id="chatBadge" class="badge-counter hidden">0</span>
+          </button>
+        </div>
+        <button id="leaveBtn" class="dock-btn danger" title="Завершить звонок">
+          <span class="dock-icon">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="22" x2="2" y1="2" y2="22"/></svg>
+          </span>
+          <span class="dock-label">Сброс</span>
+        </button>
+      </footer>
     </div>
   </div>
 
   <!-- МОДАЛКА НАСТРОЕК -->
   <div id="settingsModal" class="modal-backdrop hidden">
-    <div class="modal-card glass-card">
+    <div class="modal-card">
       <div class="modal-header">
         <h3>Настройки Zcall</h3>
         <button id="closeSettingsBtn" class="icon-close-btn">
@@ -467,29 +478,23 @@
           </select>
         </div>
         <div class="toggles-list">
-          <label class="toggle-row">
-            <span>Студийный микрофон (отключить шумодав)</span>
-            <input id="cleanMicToggle" type="checkbox" />
-          </label>
-          <label class="toggle-row">
-            <span>Отражать свою камеру</span>
-            <input id="mirrorSelfToggle" type="checkbox" checked />
-          </label>
-          <label class="toggle-row">
-            <span>Звуки интерфейса</span>
-            <input id="uiSoundsToggle" type="checkbox" checked />
-          </label>
+          <label class="toggle-row"><span>Студийный микрофон (без шумодава)</span><input id="cleanMicToggle" type="checkbox" /></label>
+          <label class="toggle-row"><span>Отражать свою камеру</span><input id="mirrorSelfToggle" type="checkbox" checked /></label>
+          <label class="toggle-row"><span>Звуки интерфейса</span><input id="uiSoundsToggle" type="checkbox" checked /></label>
         </div>
+
         <details class="advanced-box">
-          <summary>Подключение LiveKit и статистика</summary>
+          <summary>Зарегистрированные аккаунты и статистика</summary>
+          <div id="accountsRegistryList" class="accounts-list"></div>
+          <button id="clearAccountsBtn" class="ghost-btn" style="margin-top:8px;">Очистить базу аккаунтов (для теста)</button>
           <div class="field-group" style="margin-top:10px;">
             <label for="sandboxIdInput">LiveKit Sandbox ID</label>
             <div class="input-with-actions">
               <input id="sandboxIdInput" type="text" />
-              <button id="saveSandboxBtn" class="ghost-btn small">Сохранить</button>
+              <button id="saveSandboxBtn" class="ghost-btn">Сохранить</button>
             </div>
           </div>
-          <pre id="statsBox" class="stats-box">Ожидание подключения...</pre>
+          <pre id="statsBox" class="stats-box">Ожидание...</pre>
         </details>
       </div>
     </div>
@@ -504,7 +509,7 @@
       <img id="lightboxImg" alt="Просмотр" />
       <div class="lightbox-footer">
         <span id="lightboxCaption"></span>
-        <a id="lightboxDownload" class="ghost-btn small" download>Скачать</a>
+        <a id="lightboxDownload" class="ghost-btn" download>Скачать</a>
       </div>
     </div>
   </div>
