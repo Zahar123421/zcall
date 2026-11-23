@@ -735,7 +735,7 @@
 
   <script>
   (() => {
-    const DEFAULT_SANDBOX_ID = "p_2qxku4v66yr";
+    const DEFAULT_SANDBOX_ID = "123123-1fneev";
     const SANDBOX_ENDPOINT = "https://cloud-api.livekit.io/api/sandbox/connection-details";
     const ACCOUNTS_KEY = "zcall_accounts_v1";
     const SESSION_KEY = "zcall_session_v1";
@@ -762,7 +762,7 @@
     };
 
     const state = {
-      sandboxId: localStorage.getItem("zcall_sandbox_id") || DEFAULT_SANDBOX_ID,
+      sandboxId: (localStorage.getItem("zcall_sandbox_id") === "p_2qxku4v66yr" ? DEFAULT_SANDBOX_ID : localStorage.getItem("zcall_sandbox_id")) || DEFAULT_SANDBOX_ID,
       theme: localStorage.getItem("zcall_theme") || "indigo",
       user: null,
       roomName: "",
